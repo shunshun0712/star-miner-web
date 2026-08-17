@@ -6,6 +6,10 @@
 
 **Star Miner** is an original sci-fi idle / base-building browser game prototype: restore excavators, maglev transport lines and a crystal refinery on planet Aurora-1, then grow the station through automation, upgrades, energy strategy, research and drone events.
 
+## 截图
+
+![星际矿站游戏截图](screenshot.png)
+
 ## 特性
 
 - 核心生产链：星尘采掘器 → 氦-3 第二矿区 → 磁轨运输线 → 晶体精炼厂
