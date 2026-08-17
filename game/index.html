@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>星际矿站 · Star Miner</title>
+  </head>
+  <body>
+    <div id="app">
+      <header id="topbar">
+        <div class="brand">
+          <span class="logo">◆</span>
+          <div class="brand-text">
+            <h1>星际矿站</h1>
+            <span id="version-label">Web 原型 v0.1</span>
+          </div>
+        </div>
+        <div class="stats" id="stats">
+          <div class="stat" data-resource="credits" data-tip="货币：解锁设施、升级设施、研究科技都靠它">
+            <span class="stat-label">信用点</span>
+            <span class="stat-value gold" id="stat-credits">0</span>
+          </div>
+          <div class="stat" data-resource="stardust" data-tip="基础矿石：采掘器产出，可出售换信用点，也是精炼晶体的原料">
+            <span class="stat-label">星尘矿</span>
+            <span class="stat-value cyan" id="stat-stardust">0</span>
+          </div>
+          <div class="stat" data-resource="crystal" data-tip="高级资源：精炼厂产出，用于科技研究与 3 级以上升级；可出售换信用点（研究「晶体品质」后 +25%）">
+            <span class="stat-label">晶体</span>
+            <span class="stat-value purple" id="stat-crystal">0</span>
+          </div>
+          <div class="stat" data-resource="energy" data-tip="能源站产出，保证设施运转；盈余可存入储备池（研究「能源储备」），不足时全设施减产">
+            <span class="stat-label">能量</span>
+            <span class="stat-value energy-val" id="stat-energy">0</span>
+          </div>
+          <div class="stat save-stat">
+            <span class="stat-label">状态</span>
+            <span class="stat-value muted" id="event-status">正常</span>
+          </div>
+          <div class="stat save-stat">
+            <span class="stat-label">存档</span>
+            <span class="stat-value muted" id="save-status">—</span>
+          </div>
+        </div>
+        <div class="top-actions">
+          <button id="btn-sfx" class="btn ghost" title="音效开关">音效：开</button>
+          <button id="btn-save-modal" class="btn ghost" title="存档管理">存档管理</button>
+        </div>
+      </header>
+
+      <nav id="leftnav" aria-label="主导航">
+        <button class="nav-btn active" data-page="station" title="矿站">
+          <span class="nav-icon">◈</span>
+          <span class="nav-text">矿站</span>
+        </button>
+        <button class="nav-btn" data-page="starmap" title="星图（后续开放）">
+          <span class="nav-icon">✧</span>
+          <span class="nav-text">星图</span>
+        </button>
+        <button class="nav-btn" data-page="research" title="研究（解锁研究中心后开放）">
+          <span class="nav-icon">✦</span>
+          <span class="nav-text">研究</span>
+        </button>
+        <button class="nav-btn" data-page="achievements" title="成就">
+          <span class="nav-icon">★</span>
+          <span class="nav-text">成就</span>
+        </button>
+        <button class="nav-btn" data-page="help" title="帮助">
+          <span class="nav-icon">?</span>
+          <span class="nav-text">帮助</span>
+        </button>
+        <button class="nav-btn" data-page="save" title="存档管理">
+          <span class="nav-icon">▤</span>
+          <span class="nav-text">存档</span>
+        </button>
+      </nav>
+
+      <main id="scene-host" aria-label="矿站场景">
+        <div id="scene-labels"></div>
+      </main>
+
+      <aside id="right-panel">
+        <section class="panel-card" id="facility-card">
+          <h2 id="facility-name">采掘器</h2>
+          <div class="facility-meta">
+            <span class="status-badge" id="facility-status">ONLINE</span>
+            <span id="facility-level">Lv.1 / 5</span>
+          </div>
+          <dl class="facility-stats">
+            <div class="row stat-row"><dt>产量</dt><dd class="stat-main" id="facility-rate">1.20 星尘矿/秒</dd></div>
+            <div class="row stat-row"><dt>容量</dt><dd id="facility-capacity">2,000</dd></div>
+            <div class="capacity-track" aria-hidden="true"><div class="capacity-fill" id="capacity-fill"></div></div>
+            <div class="row stat-row" id="bottleneck-row">
+              <dt>瓶颈</dt>
+              <dd id="facility-bottleneck"><span class="bottleneck-arrow" id="bottleneck-arrow" aria-hidden="true"></span><span id="bottleneck-text">无</span></dd>
+            </div>
+          </dl>
+          <p id="facility-hint" class="facility-hint" hidden></p>
+          <div class="facility-action">
+            <button id="btn-facility" class="btn primary">升级（U）</button>
+            <span id="facility-cost" class="cost-hint"></span>
+          </div>
+          <p id="upgrade-preview" class="upgrade-preview" hidden></p>
+          <button id="btn-release-energy" class="btn" hidden>释放储备（-100 能量）</button>
+        </section>
+
+        <section class="panel-card" id="energy-card">
+          <h2>能源策略</h2>
+          <div class="energy-options" id="energy-options">
+            <button class="energy-btn" data-strategy="excavation">
+              <span class="energy-name">采掘优先</span>
+              <span class="energy-mult">×1.35 / ×0.90 / ×0.90</span>
+            </button>
+            <button class="energy-btn active" data-strategy="balanced">
+              <span class="energy-name">均衡运行</span>
+              <span class="energy-mult">×1.00 / ×1.00 / ×1.00</span>
+            </button>
+            <button class="energy-btn" data-strategy="refinement">
+              <span class="energy-name">精炼优先</span>
+              <span class="energy-mult">×0.90 / ×0.90 / ×1.35</span>
+            </button>
+          </div>
+          <p class="energy-effect" id="energy-effect"></p>
+          <p class="hint">快捷键 1 / 2 / 3 切换</p>
+        </section>
+
+        <section class="panel-card guide-card" id="guide-card" hidden>
+          <h2 id="guide-title">新手引导</h2>
+          <ol id="guide-steps" class="guide-steps"></ol>
+          <p id="guide-body" class="guide-body"></p>
+          <div class="guide-footer">
+            <button id="btn-guide-close" class="btn">知道了</button>
+          </div>
+        </section>
+
+        <section class="panel-card" id="market-card">
+          <h2>交易</h2>
+          <div class="sell-row">
+            <div class="sell-label">星尘矿（<span id="held-stardust">0</span>）· 1 信用点/个</div>
+            <div class="sell-controls">
+              <input id="qty-stardust" type="number" min="1" step="1" value="10" />
+              <button id="btn-sell-stardust" class="btn">出售</button>
+              <button id="btn-sell-stardust-all" class="btn ghost">全部</button>
+            </div>
+          </div>
+          <div class="sell-row">
+            <div class="sell-label">晶体（<span id="held-crystal">0</span>）· <span id="crystal-price-label">8</span> 信用点/个</div>
+            <div class="sell-controls">
+              <input id="qty-crystal" type="number" min="1" step="1" value="10" />
+              <button id="btn-sell-crystal" class="btn">出售</button>
+              <button id="btn-sell-crystal-all" class="btn ghost">全部</button>
+            </div>
+          </div>
+          <div class="auto-sell-panel">
+            <h3 class="auto-sell-title">自动出售</h3>
+            <div class="auto-sell-row">
+              <label class="auto-sell-label"><input type="checkbox" id="auto-sell-stardust" /> 星尘矿</label>
+              <label class="auto-sell-keep">保留 <input id="auto-sell-keep" type="number" min="0" step="1" value="50" /> 个</label>
+            </div>
+            <div class="auto-sell-row">
+              <label class="auto-sell-label"><input type="checkbox" id="auto-sell-crystal" /> 晶体</label>
+              <label class="auto-sell-keep">保留 <input id="auto-sell-crystal-keep" type="number" min="0" step="1" value="10" /> 个</label>
+            </div>
+            <p class="hint" id="auto-sell-hint" hidden>超出保留数量自动出售，减少手动操作</p>
+          </div>
+        </section>
+      </aside>
+
+      <div id="event-host"></div>
+      <div id="toasts" aria-live="polite"></div>
+      <div id="modal-root"></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
+
+
+
+
+
