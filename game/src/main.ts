@@ -54,6 +54,7 @@ import type {
 const STEP_MS = 100;
 const AUTOSAVE_INTERVAL_MS = 30_000;
 const HIDDEN_OFFLINE_THRESHOLD_MS = 60_000;
+const LS_SNAPSHOT_KEY = 'star-miner-snapshot';
 
 let state: GameState;
 let selectedId: FacilityId = 'excavator';
@@ -289,6 +290,27 @@ async function saveNow(reason = '自动'): Promise<void> {
   }
 }
 
+/** beforeunload/pagehide 时同步写 localStorage 快照，避免异步 IDB 事务被页面关闭中断。 */
+function writeLocalSnapshot(s: GameState): void {
+  try {
+    localStorage.setItem(LS_SNAPSHOT_KEY, serializeState(s));
+  } catch {
+    // QuotaExceededError 或隐私模式限制：静默放弃，不阻塞页面关闭
+  }
+}
+
+/** 启动时从 localStorage 读取快照回退（IDB 不可用或无存档时）。 */
+function loadFromLocalSnapshot(): GameState | null {
+  try {
+    const raw = localStorage.getItem(LS_SNAPSHOT_KEY);
+    if (!raw) return null;
+    const parsed = parseSaveJson(raw);
+    return parsed.ok ? parsed.state : null;
+  } catch {
+    return null;
+  }
+}
+
 function doFacilityAction(): void {
   sfx.click();
   const f = state.facilities[selectedId];
@@ -491,11 +513,13 @@ async function bootstrap(): Promise<void> {
         state = createNewGame(Date.now());
       }
     } else {
-      state = createNewGame(Date.now());
+      // IDB 无存档，回退 localStorage 快照（beforeunload/pagehide 紧急保存）
+      state = loadFromLocalSnapshot() ?? createNewGame(Date.now());
     }
   } catch {
-    toast('无法读取浏览器存档，原有存档未被覆盖', 'error');
-    state = createNewGame(Date.now());
+    // IDB 不可用（隐私模式/禁用），尝试 localStorage 快照回退
+    state = loadFromLocalSnapshot() ?? createNewGame(Date.now());
+    toast('无法读取浏览器存档，已尝试恢复快照', 'error');
   }
 
   applyPanelTexture();
@@ -612,7 +636,13 @@ async function bootstrap(): Promise<void> {
 
   window.addEventListener('beforeunload', () => {
     state.lastSavedAt = Date.now();
+    writeLocalSnapshot(state);
     void repo.save(serializeState(state));
+  });
+
+  window.addEventListener('pagehide', () => {
+    state.lastSavedAt = Date.now();
+    writeLocalSnapshot(state);
   });
 
   document.addEventListener('modal:open', () => scene.setPaused(true));
