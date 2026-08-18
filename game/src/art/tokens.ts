@@ -20,6 +20,8 @@ export const ART_TOKENS = {
   glow: { idle: 0.5, active: 1.2 },
   radius: 2,
   panelWidth: '300px',
+  navWidth: '64px',
+  topbarHeight: '56px',
   type: {
     title: { size: 18, weight: 600, letterSpacing: 0.5 },
     subtitle: { size: 13, weight: 500 },
@@ -50,4 +52,6 @@ export function applyTokensToCss(): void {
   s.setProperty('--danger', c.danger);
   s.setProperty('--radius', `${ART_TOKENS.radius}px`);
   s.setProperty('--panel-w', ART_TOKENS.panelWidth);
+  s.setProperty('--nav-w', ART_TOKENS.navWidth);
+  s.setProperty('--topbar-h', ART_TOKENS.topbarHeight);
 }
