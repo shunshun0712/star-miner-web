@@ -36,12 +36,25 @@ export function effectiveRecipe(state: GameState): number {
   return hasResearch(state, 'recipeOptimization') ? RECIPE_3 : CRYSTAL_RECIPE_STARDUST;
 }
 
-export function rateFor(state: GameState, id: FacilityId, now = Date.now()): number {
+/**
+ * 纯函数：给定等级（可覆盖）计算设施原始速率，包含完整乘数链：
+ * 能源策略倍率、自动采掘阵列等级加成、钻头/矿脉/催化/磁轨/太阳能等研究乘数、
+ * 能量释放增益、成就产量加成以及临时事件修饰（activeModifier）。
+ *
+ * `levelOverride` 用于升级预览计算「下一级」速率；省略时取设施当前等级。
+ * rateFor 与 upgradePreview 两边共用此函数，避免回本时间估算遗漏乘数（H5）。
+ */
+export function rawRate(
+  state: GameState,
+  id: FacilityId,
+  levelOverride?: number,
+  now: number = Date.now(),
+): number {
   const f = state.facilities[id];
   if (!f.unlocked) return 0;
   const cfg = FACILITIES[id];
   const mult = ENERGY_STRATEGIES[state.energyStrategy][id];
-  let level = f.level;
+  let level = levelOverride ?? f.level;
   if (isMining(id) && hasResearch(state, 'autoMiningArray')) level += AUTO_ARRAY_LEVELS;
   let m = 1;
   if (isMining(id)) {
@@ -57,6 +70,10 @@ export function rateFor(state: GameState, id: FacilityId, now = Date.now()): num
   if (releaseActive(state, now)) m *= ENERGY_RELEASE_MULT;
   m *= achievementProductionMultiplier(state);
   return cfg.baseSpeed * mult * (1 + SPEED_GROWTH_PER_LEVEL * (level - 1)) * activeModifier(state, id, now) * m;
+}
+
+export function rateFor(state: GameState, id: FacilityId, now = Date.now()): number {
+  return rawRate(state, id, undefined, now);
 }
 
 export function capacityFor(state: GameState, id: FacilityId): number {
@@ -87,7 +104,23 @@ export function computeBottlenecks(state: GameState, rates: ProductionRates): Fa
   if (!state.facilities.excavator.unlocked) return bottlenecks;
   const upstream = rates.excavator + rates.he3Excavator + rates.deuteriumExcavator;
   if (upstream > rates.transport) {
-    bottlenecks.push(rates.excavator >= rates.he3Excavator ? 'excavator' : 'he3Excavator');
+    // 上游采掘总量超过运输运力时，标记速率最低的矿区为瓶颈（H4）：
+    // 纳入氘采掘器三选一取最小，语义直观——最慢的矿区拖低了整体上游供给。
+    const mining: [FacilityId, number][] = [];
+    if (state.facilities.excavator.unlocked) mining.push(['excavator', rates.excavator]);
+    if (state.facilities.he3Excavator.unlocked) mining.push(['he3Excavator', rates.he3Excavator]);
+    if (state.facilities.deuteriumExcavator.unlocked) mining.push(['deuteriumExcavator', rates.deuteriumExcavator]);
+    if (mining.length > 0) {
+      let slowest: FacilityId = mining[0][0];
+      let slowestRate = mining[0][1];
+      for (let i = 1; i < mining.length; i += 1) {
+        if (mining[i][1] < slowestRate) {
+          slowestRate = mining[i][1];
+          slowest = mining[i][0];
+        }
+      }
+      bottlenecks.push(slowest);
+    }
   }
   const refineryStardustNeed = rates.refinery * effectiveRecipe(state);
   if (rates.transport > refineryStardustNeed) bottlenecks.push('transport');
@@ -148,7 +181,8 @@ export function tickProduction(
 
   let isotopeProduced = 0;
   if (hasResearch(state, 'rareIsotopeMining')) {
-    isotopeProduced = (rates.excavator + rates.he3Excavator + rates.deuteriumExcavator) * dt * ISOTOPE_CHANCE;
+    // 同位素产量同样受能源不足惩罚（M1）：按有效上游采掘速率计算，而非原始速率。
+    isotopeProduced = eff(rates.excavator + rates.he3Excavator + rates.deuteriumExcavator) * dt * ISOTOPE_CHANCE;
     state.isotope = Math.max(0, state.isotope + isotopeProduced);
     state.stats.totalIsotopeProduced += isotopeProduced;
   }

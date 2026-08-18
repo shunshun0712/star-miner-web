@@ -72,7 +72,8 @@ export function showOfflineModal(result: OfflineResult, onConfirm: () => void): 
       <div class="row"><dt>采掘器产出</dt><dd class="cyan">+${formatNumber(result.summary.producedStardust)} 星尘矿</dd></div>
       <div class="row"><dt>运输线转运</dt><dd class="cyan">+${formatNumber(result.summary.movedStardust)} 星尘矿</dd></div>
       <div class="row"><dt>精炼厂产出</dt><dd class="purple">+${formatNumber(result.summary.refinedCrystal)} 晶体</dd></div>
-    </div>`;
+    </div>
+    <p class="muted-text" style="margin-top:10px">离线为福利时段，产出不封顶，与在线容量限制不同。</p>`;
   openModal('离线收益', body, [
     {
       label: '确认领取',
