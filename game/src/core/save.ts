@@ -1,4 +1,5 @@
 import {
+  ACHIEVEMENT_BY_ID,
   DEFAULT_CRYSTAL_KEEP,
   DEFAULT_STARDUST_KEEP,
   ENERGY_STRATEGY_IDS,
@@ -6,6 +7,7 @@ import {
   FACILITY_ORDER,
   MAX_LEVEL,
   SAVE_VERSION,
+  TECH_BY_ID,
 } from './config';
 import type { EventKind, EventState, GameState, LifetimeStats } from './types';
 
@@ -190,6 +192,10 @@ export function validateState(rawIn: unknown): ParseResult {
   if (typeof s.researchCenterUnlocked !== 'boolean') return { ok: false, error: '研究中心状态非法' };
   if (!isStringArray(s.research)) return { ok: false, error: '研究列表非法' };
   if (!isStringArray(s.achievements)) return { ok: false, error: '成就列表非法' };
+  // M4：过滤掉不在 TECH_NODES / ACHIEVEMENTS 白名单内的 ID，防止恶意存档注入任意字符串
+  // 经 achievementPoints 把非法 ID 算入产量加成。白名单取自 config 的 TECH_BY_ID / ACHIEVEMENT_BY_ID。
+  s.research = (s.research as string[]).filter((id) => id in TECH_BY_ID);
+  s.achievements = (s.achievements as string[]).filter((id) => id in ACHIEVEMENT_BY_ID);
   for (const key of ['energyReleaseUntil', 'energyReleaseCooldownUntil'] as const) {
     if (!isFiniteNumber(s[key])) return { ok: false, error: `字段 ${key} 非法` };
   }

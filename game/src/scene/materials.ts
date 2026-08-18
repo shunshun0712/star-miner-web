@@ -30,6 +30,20 @@ function metal(name: string, base: string, accent?: string): THREE.MeshStandardM
 
 const c = ART_TOKENS.color;
 
+/**
+ * M3：材质去重登记表——共享材质被多个 mesh 引用，traverse 时若逐 mesh dispose
+ * 同一实例会触发 WebGL 错误。safeDispose 用 WeakSet 保证每实例只释放一次。
+ * 导出供 gameScene.teardownGraphics 遍历时复用同一去重表。
+ */
+const disposed = new WeakSet<THREE.Material>();
+
+export function safeDispose(mat: THREE.Material): void {
+  if (!disposed.has(mat)) {
+    disposed.add(mat);
+    mat.dispose();
+  }
+}
+
 /** 共享材质缓存：3D 设施统一从这里取材质，避免每网格新建。 */
 export const materials = {
   hullDark: metal('hull-dark', '#20242b'),
@@ -59,4 +73,49 @@ export const materials = {
     roughness: 0.5,
   }),
   dust: new THREE.MeshBasicMaterial({ color: c.dust }),
-} as const;
+
+  /**
+   * M3：释放 cache + 单例中的所有材质（safeDispose 去重），清空 cache，
+   * 并重建单例 + cache，使 reinitGraphics() 重建场景时拿到全新 GPU 资源。
+   * traverse 中已通过 safeDispose 释放过的材质在此自动跳过。
+   */
+  disposeAll(): void {
+    for (const mat of cache.values()) safeDispose(mat);
+    cache.clear();
+    safeDispose(this.gold);
+    safeDispose(this.cyanEnergy);
+    safeDispose(this.purpleCrystal);
+    safeDispose(this.orangeBeacon);
+    safeDispose(this.orangeWarn);
+    safeDispose(this.dust);
+    // hullDark/hullSteel/drillSteel 来自 cache，已在上面的循环中释放
+    // 重建单例 + cache，供下一轮 buildGraphics 使用
+    this.hullDark = metal('hull-dark', '#20242b');
+    this.hullSteel = metal('hull-steel', '#2e333c');
+    this.drillSteel = metal('drill-steel', '#3a404b');
+    this.gold = new THREE.MeshStandardMaterial({ color: c.gold, metalness: 1.0, roughness: 0.32 });
+    this.cyanEnergy = new THREE.MeshBasicMaterial({ color: c.cyan });
+    this.purpleCrystal = new THREE.MeshStandardMaterial({
+      color: c.purple,
+      emissive: c.purple,
+      emissiveIntensity: 1.1,
+      metalness: 0.3,
+      roughness: 0.2,
+    });
+    this.orangeBeacon = new THREE.MeshStandardMaterial({
+      color: c.orange,
+      emissive: c.orange,
+      emissiveIntensity: 1.0,
+      metalness: 0.2,
+      roughness: 0.4,
+    });
+    this.orangeWarn = new THREE.MeshStandardMaterial({
+      color: c.orange,
+      emissive: c.orange,
+      emissiveIntensity: 0.35,
+      metalness: 0.4,
+      roughness: 0.5,
+    });
+    this.dust = new THREE.MeshBasicMaterial({ color: c.dust });
+  },
+};

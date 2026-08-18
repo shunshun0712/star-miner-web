@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { FACILITIES, FACILITY_ORDER } from '../core/config';
 import type { FacilityId, FacilityStatus } from '../core/types';
 import { createGroundTexture, createHullTexture, createSkyboxTexture } from './textures';
+import { materials, safeDispose } from './materials';
 import { ART_TOKENS } from '../art/tokens';
 import { easeOutBackUpgrade } from '../art/easing';
 import { buildExcavator, type ExcavatorAnim } from './facilities/excavator';
@@ -89,6 +90,19 @@ export class GameScene {
     this.container = container;
     this.labelsLayer = labelsLayer;
     this.onSelect = opts.onSelect ?? null;
+    this.buildGraphics();
+    this.resizeObserver = new ResizeObserver(() => this.handleResize());
+    this.resizeObserver.observe(container);
+  }
+
+  /**
+   * 构建/重建所有 GPU 支撑的资源：渲染器、相机、控制器、场景、纹理、灯光、
+   * 天空盒、地面、设施网格、轨道，并在渲染器 canvas 上挂载交互与上下文事件监听。
+   * 首次 init 与 WebGL 上下文恢复（H2 reinit）共用此方法。
+   */
+  private buildGraphics(): void {
+    const container = this.container;
+    if (!container) return;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -118,6 +132,7 @@ export class GameScene {
     controls.maxPolarAngle = 1.35;
     this.controls = controls;
 
+    this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x050a14);
     this.scene.fog = new THREE.Fog(0x050a14, 50, 120);
 
@@ -135,9 +150,78 @@ export class GameScene {
     renderer.domElement.addEventListener('pointermove', this.onPointerMove);
     renderer.domElement.addEventListener('webglcontextlost', this.onContextLost);
     renderer.domElement.addEventListener('webglcontextrestored', this.onContextRestored);
+  }
 
-    this.resizeObserver = new ResizeObserver(() => this.handleResize());
-    this.resizeObserver.observe(container);
+  /**
+   * 释放所有 GPU 支撑的资源：纹理、场景内网格的 geometry/material（safeDispose 去重）、
+   * 采掘器粒子、共享材质缓存（materials.disposeAll）、控制器、渲染器（含移除 canvas 与
+   * 事件监听）、DOM 标签，并重置场景图。H2 框架：reinitGraphics 先调此方法再 rebuild。
+   * M3 补充：safeDispose 去重避免共享材质重复 dispose；materials.disposeAll 释放缓存并重建。
+   */
+  private teardownGraphics(): void {
+    cancelAnimationFrame(this.raf);
+    this.skyTex?.dispose();
+    this.skyTex = null;
+    this.groundTex?.dispose();
+    this.groundTex = null;
+    this.hullTex?.dispose();
+    this.hullTex = null;
+
+    for (const v of this.visuals.values()) {
+      v.excavator?.dust.dispose();
+      v.group.traverse((obj) => {
+        const mesh = obj as THREE.Mesh;
+        if (mesh.geometry) mesh.geometry.dispose();
+        const mat = mesh.material as THREE.Material | THREE.Material[] | undefined;
+        if (Array.isArray(mat)) {
+          for (const m of mat) safeDispose(m);
+        } else if (mat) {
+          safeDispose(mat);
+        }
+      });
+    }
+    this.visuals.clear();
+    this.tracks = null;
+
+    // M3：释放共享材质缓存（cache + 单例），并在释放后重建，供 reinit 重新构建时使用
+    materials.disposeAll();
+
+    this.controls?.dispose();
+    this.controls = null;
+
+    const dom = this.renderer?.domElement;
+    if (dom) {
+      dom.removeEventListener('pointerdown', this.onPointerDown);
+      dom.removeEventListener('pointermove', this.onPointerMove);
+      dom.removeEventListener('webglcontextlost', this.onContextLost);
+      dom.removeEventListener('webglcontextrestored', this.onContextRestored);
+      dom.remove();
+    }
+    this.renderer?.dispose();
+    this.renderer = null;
+
+    for (const label of this.labelEls.values()) label.remove();
+    this.labelEls.clear();
+
+    this.scene = new THREE.Scene();
+  }
+
+  /**
+   * WebGL 上下文恢复后重建场景（H2）。
+   * context lost 后所有 GPU 资源（buffer/texture/shader）失效，仅重启 rAF 会导致
+   * Three.js Material/Geometry 内部 GL 句柄悬空、白屏或报错。这里保留相机视角与
+   * 控制器目标，整体 teardown + 重建渲染器与场景图，保证恢复后正常渲染。
+   */
+  private reinitGraphics(): void {
+    const camPos = this.camera?.position.clone() ?? null;
+    const camTarget = this.controls?.target.clone() ?? null;
+    this.teardownGraphics();
+    this.buildGraphics();
+    if (camPos && this.camera) this.camera.position.copy(camPos);
+    if (camTarget && this.controls) this.controls.target.copy(camTarget);
+    this.clock.getDelta();
+    this.running = true;
+    this.raf = requestAnimationFrame(this.frame);
   }
 
   start(): void {
@@ -161,22 +245,9 @@ export class GameScene {
 
   dispose(): void {
     this.running = false;
-    cancelAnimationFrame(this.raf);
     this.resizeObserver?.disconnect();
-    this.renderer?.domElement.removeEventListener('pointerdown', this.onPointerDown);
-    this.renderer?.domElement.removeEventListener('pointermove', this.onPointerMove);
-    this.renderer?.domElement.removeEventListener('webglcontextlost', this.onContextLost);
-    this.renderer?.domElement.removeEventListener('webglcontextrestored', this.onContextRestored);
-    this.controls?.dispose();
-    this.skyTex?.dispose();
-    this.groundTex?.dispose();
-    this.hullTex?.dispose();
-    this.renderer?.dispose();
-    this.renderer?.domElement.remove();
-    for (const label of this.labelEls.values()) label.remove();
-    this.labelEls.clear();
-    for (const v of this.visuals.values()) v.excavator?.dust.dispose();
-    this.visuals.clear();
+    this.resizeObserver = null;
+    this.teardownGraphics();
   }
 
   private onContextLost = (e: Event): void => {
@@ -186,9 +257,8 @@ export class GameScene {
   };
 
   private onContextRestored = (): void => {
-    this.running = true;
-    this.clock.getDelta();
-    this.raf = requestAnimationFrame(this.frame);
+    // H2：上下文恢复后重建 GPU 资源，而非仅重启 rAF，避免材质/几何体 GL 句柄悬空。
+    this.reinitGraphics();
   };
 
   private onPointerDown = (e: PointerEvent): void => {

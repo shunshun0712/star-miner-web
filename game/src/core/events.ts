@@ -38,8 +38,14 @@ export function rollNextEventAt(state: GameState, now: number, rand: () => numbe
 
 export function pickEventKind(state: GameState, rand: () => number = Math.random): EventKind {
   const r = rand();
-  if (r < 0.15 && !state.eventState.investUsed && state.credits >= INVEST_COST) return 'invest';
-  if (r < 0.4) return 'solar-storm';
+  const investAvailable = !state.eventState.investUsed && state.credits >= INVEST_COST;
+  if (investAvailable && r < 0.15) return 'invest';
+  // M2：投入型事件不可用时，原本 [0,0.15) 区间会整体落入太阳风暴分支，
+  // 导致后期太阳风暴概率从 25% 膨胀到 40%。这里对该区间重新 roll 一次，
+  // 使风暴/无人机仍按约 25:60 的比例分配，而非把投入的 15% 全部塞给风暴。
+  let rr = r;
+  if (!investAvailable && r < 0.15) rr = rand();
+  if (rr < 0.4) return 'solar-storm';
   return 'drone';
 }
 

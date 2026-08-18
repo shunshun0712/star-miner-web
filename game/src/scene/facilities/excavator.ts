@@ -29,6 +29,9 @@ function merged(parts: Part[]): THREE.BufferGeometry {
     geos.push(g);
   }
   const out = mergeGeometries(geos);
+  // M3：合并后立即释放克隆几何体与原始几何体，避免 GPU 内存泄漏
+  for (const g of geos) g.dispose();
+  for (const p of parts) p.geo.dispose();
   if (!out) throw new Error('excavator: mergeGeometries failed');
   return out;
 }

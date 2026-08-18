@@ -343,7 +343,7 @@ export class TransportTracks {
       const path = src.path;
       for (let j = 0; j < 2; j += 1) {
         let d = (this.dist[s] + j * path.length * 0.5) % path.length;
-        if (congested) d = Math.min(d, src.clampDist - idx * 0.35);
+        if (congested) d = Math.min(d, Math.max(0, src.clampDist - idx * 0.35));
         path.pointAt(d / path.length, this.dummy.position);
         let podScale = running ? 1 : 0.001;
         if (running && d > path.length - 1.15) {

@@ -36,27 +36,29 @@ export function buildTransportHub(group: THREE.Group): void {
   antenna.position.y = 2.95;
   group.add(antenna);
 
-  const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 10), materials.orangeBeacon.clone());
+  // M3：beacon 不需独立动画，直接用共享材质（traverse + safeDispose 统一释放）
+  const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 10), materials.orangeBeacon);
   beacon.position.y = 3.4;
   group.add(beacon);
 
   // 转运臂：西侧接环、东侧发射（hub 在 (6,0)，精炼厂在 (0,0) 即西侧）
-  const arm = new THREE.Mesh(
-    mergeGeometries([
-      new THREE.BoxGeometry(2.4, 0.28, 0.5).translate(-1.2, 0, 0),
-      new THREE.BoxGeometry(0.5, 0.28, 1.2).translate(1.2, 0, 0),
-    ]) ?? new THREE.BufferGeometry(),
-    materials.hullSteel,
-  );
+  // M3：合并后释放临时 BoxGeometry，避免 GPU 内存泄漏
+  const armGeo1 = new THREE.BoxGeometry(2.4, 0.28, 0.5).translate(-1.2, 0, 0);
+  const armGeo2 = new THREE.BoxGeometry(0.5, 0.28, 1.2).translate(1.2, 0, 0);
+  const armGeo = mergeGeometries([armGeo1, armGeo2]) ?? new THREE.BufferGeometry();
+  armGeo1.dispose();
+  armGeo2.dispose();
+  const arm = new THREE.Mesh(armGeo, materials.hullSteel);
   arm.position.set(4.9, 1.05, 0);
   arm.castShadow = true;
   group.add(arm);
 
-  const strip = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.06, 0.12), materials.cyanEnergy.clone());
+  // M3：strip/lamp 不需独立动画，直接用共享材质
+  const strip = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.06, 0.12), materials.cyanEnergy);
   strip.position.set(4.9, 1.22, 0);
   group.add(strip);
 
-  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 8), materials.cyanEnergy.clone());
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 8), materials.cyanEnergy);
   lamp.position.set(4.9, 1.35, 0);
   group.add(lamp);
 }

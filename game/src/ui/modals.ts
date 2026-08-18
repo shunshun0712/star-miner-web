@@ -33,7 +33,12 @@ function openModal(
 ): void {
   const root = document.getElementById('modal-root');
   if (!root) return;
-  document.querySelectorAll('.modal-backdrop').forEach((b) => b.remove());
+  // M7：移除旧弹窗前逐个 dispatch modal:close，统一收口到关闭路径，
+  // 避免旧弹窗的 modal:closed 回调丢失
+  const existingBackdrops = document.querySelectorAll('.modal-backdrop');
+  existingBackdrops.forEach(() => {
+    document.dispatchEvent(new CustomEvent('modal:close'));
+  });
   const backdrop = document.createElement('div');
   backdrop.className = 'modal-backdrop';
   const modal = document.createElement('div');
@@ -72,7 +77,8 @@ export function showOfflineModal(result: OfflineResult, onConfirm: () => void): 
       <div class="row"><dt>采掘器产出</dt><dd class="cyan">+${formatNumber(result.summary.producedStardust)} 星尘矿</dd></div>
       <div class="row"><dt>运输线转运</dt><dd class="cyan">+${formatNumber(result.summary.movedStardust)} 星尘矿</dd></div>
       <div class="row"><dt>精炼厂产出</dt><dd class="purple">+${formatNumber(result.summary.refinedCrystal)} 晶体</dd></div>
-    </div>`;
+    </div>
+    <p class="muted-text" style="margin-top:10px">离线为福利时段，产出不封顶，与在线容量限制不同。</p>`;
   openModal('离线收益', body, [
     {
       label: '确认领取',

@@ -1,13 +1,6 @@
-import {
-  ENERGY_STRATEGIES,
-  FACILITIES,
-  MAX_LEVEL,
-  SPEED_GROWTH_PER_LEVEL,
-  STARDUST_PRICE,
-} from './config';
+import { MAX_LEVEL, STARDUST_PRICE } from './config';
 import { crystalPrice, crystalUpgradeCost, upgradeCost } from './economy';
-import { activeModifier } from './events';
-import { effectiveRecipe } from './production';
+import { effectiveRecipe, rawRate } from './production';
 import { hasResearch } from './research';
 import type { FacilityId, GameState } from './types';
 
@@ -24,11 +17,11 @@ export interface UpgradePreview {
 export function upgradePreview(state: GameState, id: FacilityId, now = Date.now()): UpgradePreview | null {
   const f = state.facilities[id];
   if (!f.unlocked || f.level >= MAX_LEVEL) return null;
-  const cfg = FACILITIES[id];
-  const mult = ENERGY_STRATEGIES[state.energyStrategy][id];
-  const mod = activeModifier(state, id, now);
-  const currentRate = cfg.baseSpeed * mult * (1 + SPEED_GROWTH_PER_LEVEL * (f.level - 1)) * mod;
-  const nextRate = cfg.baseSpeed * mult * (1 + SPEED_GROWTH_PER_LEVEL * f.level) * mod;
+  // H5：currentRate/nextRate 复用 rawRate，包含完整乘数链（能源策略、自动采掘阵列、
+  // 钻头/矿脉/催化/磁轨/太阳能、能量释放、成就加成、事件修饰），与 rateFor 完全一致，
+  // 避免回本时间被高估 m 倍。
+  const currentRate = rawRate(state, id, f.level, now);
+  const nextRate = rawRate(state, id, f.level + 1, now);
   const deltaRate = nextRate - currentRate;
   const costCredits = upgradeCost(state, id);
   const costCrystal = crystalUpgradeCost(state, id);

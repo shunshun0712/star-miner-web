@@ -2,7 +2,11 @@
 const STORE = 'saves';
 const KEY = 'main';
 
+/** L2：缓存 IDBDatabase 实例，load/save 复用同一连接，避免每次操作重新 openDb */
+let dbInstance: IDBDatabase | null = null;
+
 function openDb(): Promise<IDBDatabase> {
+  if (dbInstance) return Promise.resolve(dbInstance);
   return new Promise((resolve, reject) => {
     if (typeof indexedDB === 'undefined') {
       reject(new Error('当前环境不支持 IndexedDB'));
@@ -13,7 +17,16 @@ function openDb(): Promise<IDBDatabase> {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
     };
-    req.onsuccess = () => resolve(req.result);
+    req.onsuccess = () => {
+      dbInstance = req.result;
+      // L2：连接意外关闭时清空缓存，下次 openDb 重新建立
+      dbInstance.onclose = () => { dbInstance = null; };
+      dbInstance.onversionchange = () => {
+        dbInstance?.close();
+        dbInstance = null;
+      };
+      resolve(dbInstance);
+    };
     req.onerror = () => reject(req.error ?? new Error('打开存档数据库失败'));
   });
 }
