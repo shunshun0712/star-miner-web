@@ -564,13 +564,3 @@ export class GameScene {
     if (this.running) this.raf = requestAnimationFrame(this.frame);
   };
 }
-
-
-
-
-
-
-
-
-
-

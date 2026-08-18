@@ -479,8 +479,8 @@ function frame(now: number): void {
   while (acc >= STEP_MS) {
     lastSummary = tickProduction(state, STEP_MS, { now: Date.now() });
     acc -= STEP_MS;
+    applyAutoSell(state);
   }
-  applyAutoSell(state);
   if (now - lastAchievementCheck >= 1000) {
     lastAchievementCheck = now;
     handleAchievements(checkAchievements(state));
@@ -498,6 +498,15 @@ function frame(now: number): void {
 let lastFrame = performance.now();
 let acc = 0;
 let lastAchievementCheck = 0;
+
+let autosaveTimer: number | null = null;
+
+function stopAutosave(): void {
+  if (autosaveTimer !== null) {
+    clearInterval(autosaveTimer);
+    autosaveTimer = null;
+  }
+}
 
 async function bootstrap(): Promise<void> {
   applyTokensToCss();
@@ -615,7 +624,7 @@ async function bootstrap(): Promise<void> {
     onDebug: openDebugPanel,
   });
 
-  window.setInterval(() => void saveNow('定时'), AUTOSAVE_INTERVAL_MS);
+  autosaveTimer = window.setInterval(() => void saveNow('定时'), AUTOSAVE_INTERVAL_MS);
 
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
@@ -638,6 +647,7 @@ async function bootstrap(): Promise<void> {
     state.lastSavedAt = Date.now();
     writeLocalSnapshot(state);
     void repo.save(serializeState(state));
+    stopAutosave();
   });
 
   window.addEventListener('pagehide', () => {

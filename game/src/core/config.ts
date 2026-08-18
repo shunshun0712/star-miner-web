@@ -107,7 +107,7 @@ export const FACILITIES: Record<FacilityId, FacilityConfig> = {
   },
   deuteriumExcavator: {
     id: 'deuteriumExcavator',
-    name: '氘-3 采掘器',
+    name: '氘采掘器',
     baseSpeed: 1.4,
     baseCapacity: 2500,
     baseUpgradeCost: 80,
