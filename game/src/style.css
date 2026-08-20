@@ -1460,3 +1460,146 @@ button {
 .nav-btn[data-page="reactor"] .nav-icon {
   color: var(--purple);
 }
+
+
+/* ════════════════════════════════════════════
+   T2-3: 转生仪式弹窗 + 转生历史区块
+   ════════════════════════════════════════════ */
+
+.ceremony-modal {
+  width: min(560px, 92vw);
+}
+
+.ceremony-steps {
+  list-style: none;
+  display: flex;
+  gap: 6px;
+  margin: 0 0 14px;
+  padding: 0;
+}
+
+.ceremony-step-mark {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 11px;
+  color: var(--muted);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.ceremony-step-mark .mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ceremony-step-mark.current {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+
+.ceremony-step-mark.current .mark {
+  background: var(--cyan);
+  color: #050a14;
+  border-color: var(--cyan);
+}
+
+.ceremony-step-mark.done {
+  border-color: rgba(88, 224, 161, 0.5);
+  color: var(--ok);
+}
+
+.ceremony-step-mark.done .mark {
+  background: rgba(88, 224, 161, 0.25);
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+.ceremony-body .offline-list .row dd b.gold {
+  color: var(--gold);
+}
+
+.ceremony-sub {
+  margin-top: 4px;
+}
+
+.ceremony-total {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  align-items: baseline;
+  margin: 12px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.ceremony-total b {
+  justify-self: end;
+  color: var(--text);
+}
+
+.ceremony-total b.gold.big {
+  font-size: 20px;
+  color: var(--gold);
+}
+
+.ceremony-loss .row dd {
+  color: var(--warn);
+}
+
+.ceremony-warn {
+  margin-top: 12px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--warn);
+  background: rgba(255, 159, 67, 0.08);
+  color: var(--warn);
+  font-size: 13px;
+  border-radius: 4px;
+}
+
+/* 转生历史区块（成就弹窗顶部） */
+.prestige-history-block {
+  border: 1px solid rgba(160, 107, 255, 0.4);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 16px;
+  background: rgba(160, 107, 255, 0.06);
+}
+
+.prestige-history-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 8px;
+  color: var(--purple);
+  letter-spacing: 0.4px;
+}
+
+.prestige-history-subtitle {
+  font-size: 12px;
+  font-weight: 600;
+  margin: 10px 0 4px;
+  color: var(--muted);
+}
+
+.prestige-history-list .row dd {
+  font-size: 12px;
+  color: var(--text);
+}
+
+/* 转生导航按钮特殊样式 */
+.nav-btn[data-page="prestige"] .nav-icon {
+  color: var(--purple);
+}

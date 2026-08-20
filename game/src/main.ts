@@ -24,6 +24,12 @@ import { ConsumptionEngine } from './core/consumption';
 import { TransactionalRepository } from './save/transactional';
 import { LayeredStateBackend } from './save/layeredBackend';
 import { ReactorRuntime, REACTOR_BUFF_BY_ID, EXPLORATION_TARGET_BY_ID, EXCHANGE_RECIPE_BY_ID } from './core/reactor';
+import { executePrestigeReset, previewPrestigeReset } from './core/prestige';
+import {
+  buildBaselineReview,
+  computeStardustBreakdown,
+  describePrestigeBonuses,
+} from './core/prestigeCeremony';
 import { getResource } from './core/resourceRegistry';
 import { registerShortcuts } from './input/shortcuts';
 import { downloadCsvFile, downloadSaveFile, importSaveFile } from './save/jsonTransfer';
@@ -34,6 +40,7 @@ import * as sfx from './audio/sfx';
 import { Hud } from './ui/hud';
 import { Panel } from './ui/panel';
 import { ReactorPanel } from './ui/reactorPanel';
+import { showPrestigeCeremony } from './ui/prestigeCeremony';
 import { applyPanelTexture } from './ui/panelTexture';
 import {
   showAchievementsModal,
@@ -76,6 +83,8 @@ const milestones: Milestone[] = [];
 const repo = new IndexedDbSaveRepository();
 // T2-1: 分层存档后端——基线层('main') + 转生层('prestige') 独立持久化、原子写
 const stateBackend = new LayeredStateBackend(repo);
+// T0-1 事务仓库（模块级）：消费引擎与转生重置共用同一持久化路径
+const txRepo = new TransactionalRepository<GameState>(stateBackend, structuredClone);
 const scene = new GameScene();
 let hud: Hud;
 let panel: Panel;
@@ -413,6 +422,45 @@ function openAchievementsModal(): void {
   showAchievementsModal(state);
 }
 
+/**
+ * T2-3: 打开转生仪式弹窗——三步引导（成就回顾 / 星核结算 / 确认转生）。
+ *
+ * 数据全部来自 previewPrestigeReset（纯函数，确认前零写操作）。
+ * 确认 → executePrestigeReset 事务落盘 → 播放重生动画 → 回到含永久加成的新初始态。
+ * 取消 → 丢弃 preview，游戏状态完全不变（验收④）。
+ */
+function openPrestigeCeremony(): void {
+  const now = Date.now();
+  const preview = previewPrestigeReset(state, now);
+  const breakdown = computeStardustBreakdown(state);
+  const review = buildBaselineReview(state);
+  const bonuses = describePrestigeBonuses(preview.permanentBonuses);
+  showPrestigeCeremony({
+    preview,
+    breakdown,
+    review,
+    bonuses,
+    now,
+    handlers: {
+      // 取消：preview 是纯函数返回值，丢弃即可——零写操作
+      onCancel: () => undefined,
+      onConfirm: async () => {
+        const result = await executePrestigeReset(txRepo, state, Date.now());
+        if (!result.ok) {
+          toast(result.error ?? '转生失败', 'error');
+          return;
+        }
+        // state 引用被事务原地覆写为重建后的状态（含永久加成，非裸 createNewGame）
+        selectedId = 'excavator';
+        lastSummary = null;
+        await scene.playPrestigeSequence();
+        toast(`转生完成！等级 Lv.${state.prestige.prestigeLevel}，星核 +${result.stardustEarned}`);
+        void saveNow('转生');
+      },
+    },
+  });
+}
+
 function openStarmap(): void {
   showStarmapModal(state);
 }
@@ -624,7 +672,7 @@ async function bootstrap(): Promise<void> {
 
   // T1-2 同位素反应堆系统：ConsumptionEngine → ReactorRuntime → ReactorPanel
   // T2-1: 事务后端改用分层存档（基线层 + 转生层），消费引擎与转生重置共用同一持久化路径
-  const txRepo = new TransactionalRepository<GameState>(stateBackend, structuredClone);
+  // txRepo 已提升为模块级常量（见文件顶部），此处复用
   const consumptionEngine = new ConsumptionEngine(txRepo);
   reactorRuntime = new ReactorRuntime(consumptionEngine);
   reactorPanel = new ReactorPanel({
@@ -693,6 +741,8 @@ async function bootstrap(): Promise<void> {
         openResearchModal();
       } else if (page === 'achievements') {
         openAchievementsModal();
+      } else if (page === 'prestige') {
+        openPrestigeCeremony();
       } else if (page === 'reactor') {
         if (!hasResearch(state, 'rareIsotopeMining')) {
           toast('需先完成「稀有同位素开采」研究', 'error');

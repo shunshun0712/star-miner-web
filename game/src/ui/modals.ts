@@ -437,6 +437,39 @@ export function showResearchModal(state: GameState, handlers: { onResearch: (id:
 export function showAchievementsModal(state: GameState): void {
   const points = achievementPoints(state);
   const mult = achievementProductionMultiplier(state);
+  // T2-3：转生历史区块（转生等级 / 星核余额 / 历次转生摘要）
+  const prestige = state.prestige;
+  const historyRows = prestige.history
+    .map((h) => {
+      const snap = h.baselineSnapshot;
+      const facilitySummary = Object.entries(snap.facilityLevels)
+        .filter(([, lvl]) => lvl > 1)
+        .map(([id, lvl]) => `${FACILITIES[id as FacilityId]?.name ?? id} Lv.${lvl}`)
+        .join('、');
+      return `<div class="row">
+        <dt>第 ${h.sequence} 世</dt>
+        <dd>
+          <span class="cyan">+${formatNumber(h.stardustEarned)} 星核</span>
+          · ${new Date(h.timestamp).toLocaleString('zh-CN')}
+          ${snap.researchCount > 0 ? ` · 研究 ${snap.researchCount}` : ''}
+          ${snap.achievementCount > 0 ? ` · 成就 ${snap.achievementCount}` : ''}
+          ${facilitySummary ? ` · ${facilitySummary}` : ''}
+        </dd>
+      </div>`;
+    })
+    .join('');
+  const prestigeBlock = `
+    <div class="prestige-history-block">
+      <h3 class="prestige-history-title">转生进度 · Lv.${prestige.prestigeLevel}</h3>
+      <div class="offline-list">
+        <div class="row"><dt>星核余额</dt><dd class="gold">${formatNumber(prestige.stardust)}</dd></div>
+        <div class="row"><dt>永久加成</dt><dd>${prestige.unlocked.length} 项</dd></div>
+      </div>
+      ${prestige.history.length > 0 ? `
+        <h4 class="prestige-history-subtitle">历次转生（${prestige.history.length}）</h4>
+        <div class="offline-list prestige-history-list">${historyRows}</div>
+      ` : '<p class="muted-text" style="margin:6px 0 0">尚未转生——积累资源与设施等级后可在「转生」入口重置进度换取永久星核。</p>'}
+    </div>`;
   const cats: AchievementCategory[] = ['production', 'construction', 'tech', 'event', 'exploration', 'hidden'];
   const groups = cats
     .map((cat) => {
@@ -461,7 +494,7 @@ export function showAchievementsModal(state: GameState): void {
       </div>`;
     })
     .join('');
-  openModal(`成就（${points} 点 · 全局产量 ×${mult.toFixed(2)}）`, groups, [
+  openModal(`成就（${points} 点 · 全局产量 ×${mult.toFixed(2)}）`, prestigeBlock + groups, [
     { label: '关闭', onClick: (close) => close() },
   ]);
 }

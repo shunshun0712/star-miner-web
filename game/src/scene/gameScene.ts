@@ -10,6 +10,7 @@ import { buildExcavator, type ExcavatorAnim } from './facilities/excavator';
 import { buildTransportHub } from './facilities/transport';
 import { TransportTracks } from './tracks';
 import { ReactorFX } from './reactorFX';
+import { PrestigeFX } from './prestigeFX';
 
 export interface SceneSyncState {
   statuses: Record<FacilityId, FacilityStatus>;
@@ -63,6 +64,10 @@ export class GameScene {
   private tracks: TransportTracks | null = null;
   /** T1-2：同位素反应堆视觉（粒子流 + 脉动核心） */
   private reactorFX: ReactorFX | null = null;
+  /** T2-3：转生仪式动画（坍缩 → 爆发 → 重生） */
+  private prestigeFX: PrestigeFX | null = null;
+  /** T2-3：转生动画结束回调（playPrestigeSequence 的 Promise resolver） */
+  private prestigeResolver: (() => void) | null = null;
   private reactorActivity = 0;
   private transportCongested = false;
   private raycaster = new THREE.Raycaster();
@@ -152,6 +157,7 @@ export class GameScene {
     this.buildFacilities();
     this.buildTracks();
     this.buildReactor();
+    this.buildPrestigeFX();
 
     renderer.domElement.addEventListener('pointerdown', this.onPointerDown);
     renderer.domElement.addEventListener('pointermove', this.onPointerMove);
@@ -192,6 +198,10 @@ export class GameScene {
 
     this.reactorFX?.dispose();
     this.reactorFX = null;
+
+    this.prestigeFX?.dispose();
+    this.prestigeFX = null;
+    this.prestigeResolver = null;
 
     // M3：释放共享材质缓存（cache + 单例），并在释放后重建，供 reinit 重新构建时使用
     materials.disposeAll();
@@ -537,6 +547,28 @@ export class GameScene {
     this.scene.add(this.reactorFX.group);
   }
 
+  /** T2-3：构建转生仪式动画视觉，置于场景中心上方（默认隐藏，启动时显示） */
+  private buildPrestigeFX(): void {
+    this.prestigeFX = new PrestigeFX();
+    this.scene.add(this.prestigeFX.group);
+  }
+
+  /**
+   * T2-3：播放转生仪式动画（坍缩 → 爆发 → 重生），返回动画结束的 Promise。
+   *
+   * 动画挂在主渲染循环内更新（frame 每帧调 prestigeFX.update），不另起 rAF，
+   * 与主循环零冲突（验收①）。墙钟驱动：startElapsed 取自 GameScene.elapsed，
+   * 与设施/反应堆视觉同一时间基准。
+   */
+  playPrestigeSequence(): Promise<void> {
+    if (!this.prestigeFX) return Promise.resolve();
+    // 复用现有实例：动画结束（finish）后已自隐藏，可再次 start
+    this.prestigeFX.start(this.elapsed);
+    return new Promise<void>((resolve) => {
+      this.prestigeResolver = resolve;
+    });
+  }
+
   private buildLabel(id: FacilityId): void {
     if (!this.labelsLayer) return;
     const label = document.createElement('div');
@@ -647,6 +679,13 @@ export class GameScene {
 
     this.tracks?.update(dt, this.activity, this.transportCongested, this.selected);
     this.reactorFX?.update(dt, this.elapsed);
+    // T2-3：转生仪式动画（墙钟驱动，挂在主循环内，不另起 rAF）
+    this.prestigeFX?.update(dt, this.elapsed);
+    if (this.prestigeResolver && this.prestigeFX && !this.prestigeFX.isActive()) {
+      const resolve = this.prestigeResolver;
+      this.prestigeResolver = null;
+      resolve();
+    }
 
     this.controls?.update();
     this.updateLabels();
