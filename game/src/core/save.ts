@@ -50,64 +50,76 @@ function defaultEventState(now: number): EventState {
   };
 }
 
+// ── 迁移链 v1→v6：每段独立函数，便于单测 ──
+
+export function migrateV1ToV2(raw: Record<string, unknown>): Record<string, unknown> {
+  const facilities = (raw.facilities as Record<string, unknown> | undefined) ?? {};
+  facilities.he3Excavator = {
+    level: 1,
+    unlocked: raw.secondMineUnlocked === true,
+  };
+  const createdAt = isFiniteNumber(raw.createdAt) ? (raw.createdAt as number) : Date.now();
+  return { ...raw, version: 2, facilities, eventState: defaultEventState(createdAt) };
+}
+
+export function migrateV2ToV3(raw: Record<string, unknown>): Record<string, unknown> {
+  const facilities = (raw.facilities as Record<string, unknown> | undefined) ?? {};
+  facilities.deuteriumExcavator = { level: 1, unlocked: false };
+  return { ...raw, version: 3, facilities };
+}
+
+export function migrateV3ToV4(raw: Record<string, unknown>): Record<string, unknown> {
+  return {
+    ...raw,
+    version: 4,
+    settings: {
+      autoSellStardust: false,
+      stardustKeepAmount: DEFAULT_STARDUST_KEEP,
+    },
+  };
+}
+
+export function migrateV4ToV5(raw: Record<string, unknown>): Record<string, unknown> {
+  const settings = (raw.settings as Record<string, unknown> | undefined) ?? {};
+  return {
+    ...raw,
+    version: 5,
+    settings: {
+      autoSellStardust: settings.autoSellStardust === true,
+      stardustKeepAmount: isFiniteNumber(settings.stardustKeepAmount)
+        ? (settings.stardustKeepAmount as number)
+        : DEFAULT_STARDUST_KEEP,
+      autoSellCrystal: false,
+      crystalKeepAmount: DEFAULT_CRYSTAL_KEEP,
+    },
+  };
+}
+
+export function migrateV5ToV6(raw: Record<string, unknown>): Record<string, unknown> {
+  const facilities = (raw.facilities as Record<string, unknown> | undefined) ?? {};
+  facilities.energyStation = { level: 1, unlocked: false };
+  return {
+    ...raw,
+    version: 6,
+    facilities,
+    energy: isFiniteNumber(raw.energy) ? (raw.energy as number) : 0,
+    isotope: isFiniteNumber(raw.isotope) ? (raw.isotope as number) : 0,
+    researchCenterUnlocked: raw.researchCenterUnlocked === true,
+    research: Array.isArray(raw.research) ? raw.research : [],
+    stats: typeof raw.stats === 'object' && raw.stats !== null ? raw.stats : defaultStats(),
+    achievements: Array.isArray(raw.achievements) ? raw.achievements : [],
+    energyReleaseUntil: isFiniteNumber(raw.energyReleaseUntil) ? (raw.energyReleaseUntil as number) : 0,
+    energyReleaseCooldownUntil: isFiniteNumber(raw.energyReleaseCooldownUntil) ? (raw.energyReleaseCooldownUntil as number) : 0,
+  };
+}
+
 function migrate(raw: Record<string, unknown>): unknown {
   let s: Record<string, unknown> = { ...raw };
-  if (s.version === 1) {
-    const facilities = (s.facilities as Record<string, unknown> | undefined) ?? {};
-    (facilities as Record<string, unknown>).he3Excavator = {
-      level: 1,
-      unlocked: s.secondMineUnlocked === true,
-    };
-    const createdAt = isFiniteNumber(s.createdAt) ? (s.createdAt as number) : Date.now();
-    s = { ...s, version: 2, facilities, eventState: defaultEventState(createdAt) };
-  }
-  if (s.version === 2) {
-    const facilities = (s.facilities as Record<string, unknown> | undefined) ?? {};
-    (facilities as Record<string, unknown>).deuteriumExcavator = { level: 1, unlocked: false };
-    s = { ...s, version: 3, facilities };
-  }
-  if (s.version === 3) {
-    s = {
-      ...s,
-      version: 4,
-      settings: {
-        autoSellStardust: false,
-        stardustKeepAmount: DEFAULT_STARDUST_KEEP,
-      },
-    };
-  }
-  if (s.version === 4) {
-    const settings = (s.settings as Record<string, unknown> | undefined) ?? {};
-    s = {
-      ...s,
-      version: 5,
-      settings: {
-        autoSellStardust: settings.autoSellStardust === true,
-        stardustKeepAmount: isFiniteNumber(settings.stardustKeepAmount)
-          ? (settings.stardustKeepAmount as number)
-          : DEFAULT_STARDUST_KEEP,
-        autoSellCrystal: false,
-        crystalKeepAmount: DEFAULT_CRYSTAL_KEEP,
-      },
-    };
-  }
-  if (s.version === 5) {
-    const facilities = (s.facilities as Record<string, unknown> | undefined) ?? {};
-    (facilities as Record<string, unknown>).energyStation = { level: 1, unlocked: false };
-    s = {
-      ...s,
-      version: 6,
-      facilities,
-      energy: 0,
-      isotope: 0,
-      researchCenterUnlocked: false,
-      research: [],
-      stats: defaultStats(),
-      achievements: [],
-      energyReleaseUntil: 0,
-      energyReleaseCooldownUntil: 0,
-    };
-  }
+  if (s.version === 1) s = migrateV1ToV2(s);
+  if (s.version === 2) s = migrateV2ToV3(s);
+  if (s.version === 3) s = migrateV3ToV4(s);
+  if (s.version === 4) s = migrateV4ToV5(s);
+  if (s.version === 5) s = migrateV5ToV6(s);
   return s;
 }
 
