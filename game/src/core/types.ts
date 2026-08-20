@@ -55,6 +55,10 @@ export interface GameState {
   crystal: number;
   energy: number;
   isotope: number;
+  /** T1-3: T3 稀有资源（反物质），v0.5 只注册 schema 不配数值 */
+  antimatter: number;
+  /** T1-3: T4 稀有资源（暗物质），v0.5 只注册 schema 不配数值 */
+  darkmatter: number;
   facilities: Record<FacilityId, FacilityState>;
   energyStrategy: EnergyStrategyId;
   eventState: EventState;

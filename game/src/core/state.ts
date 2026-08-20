@@ -14,6 +14,8 @@ export function createNewGame(now: number): GameState {
     crystal: 0,
     energy: 0,
     isotope: 0,
+    antimatter: 0,
+    darkmatter: 0,
     facilities,
     energyStrategy: 'balanced',
     eventState: {

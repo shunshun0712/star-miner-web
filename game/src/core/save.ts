@@ -137,7 +137,11 @@ export function validateState(rawIn: unknown): ParseResult {
     return { ok: false, error: `存档版本不支持（当前版本 ${SAVE_VERSION}）` };
   }
 
-  for (const res of ['credits', 'stardust', 'refineryBuffer', 'crystal', 'energy', 'isotope'] as const) {
+  // T1-3: 回填 antimatter/darkmatter 字段——旧版 v6 存档不含这些字段
+  if (!isFiniteNumber(s.antimatter)) s.antimatter = 0;
+  if (!isFiniteNumber(s.darkmatter)) s.darkmatter = 0;
+
+  for (const res of ['credits', 'stardust', 'refineryBuffer', 'crystal', 'energy', 'isotope', 'antimatter', 'darkmatter'] as const) {
     if (!isFiniteNumber(s[res]) || (s[res] as number) < 0) {
       return { ok: false, error: `资源 ${res} 不能为负数或非法值` };
     }

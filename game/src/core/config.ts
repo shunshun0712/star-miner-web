@@ -81,6 +81,26 @@ export const RESOURCE_SCHEMAS: ResourceSchema[] = [
     stateKey: 'isotope',
     schemaVersion: 1,
   },
+  {
+    id: 'antimatter',
+    name: '反物质',
+    description: 'T3 科技节点消耗的稀有资源，通过深空探索获取',
+    category: 'rare',
+    sellable: false,
+    consumable: true,
+    stateKey: 'antimatter',
+    schemaVersion: 1,
+  },
+  {
+    id: 'darkmatter',
+    name: '暗物质',
+    description: 'T4 科技节点消耗的稀有资源，通过深空探索获取',
+    category: 'rare',
+    sellable: false,
+    consumable: true,
+    stateKey: 'darkmatter',
+    schemaVersion: 1,
+  },
 ];
 
 /**
