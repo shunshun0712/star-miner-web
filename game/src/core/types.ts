@@ -48,7 +48,11 @@ export interface LifetimeStats {
 }
 
 export interface GameState {
-  version: 7;
+  /**
+   * T2-1: 存档版本升至 8——引入转生层（prestige）。
+   * 基线层（除 prestige 外的全部字段）随转生重置；转生层独立持久化、跨转生保留。
+   */
+  version: 8;
   credits: number;
   stardust: number;
   refineryBuffer: number;
@@ -73,7 +77,65 @@ export interface GameState {
   energyReleaseCooldownUntil: number;
   createdAt: number;
   lastSavedAt: number;
+  /**
+   * T2-1: 转生层（v8 新增）——独立持久化、跨转生保留。
+   * 转生只重置基线层，prestige 永不随重置清空（prestigeLevel +1、永久解锁不变）。
+   */
+  prestige: PrestigeLayer;
 }
+
+/**
+ * T2-1: 转生层——基线层重置后仍保留的"永久进度"。
+ *
+ * 字段（与派单一致：永久解锁列表 / 星核余额 / 转生次数 / 转生历史快照）：
+ * - unlocked：永久解锁列表，每个 id 在 PRESTIGE_UNLOCKS 注册；转生后基线层据此获得永久 buff
+ * - stardust：星核余额（转生货币，用于商店购买永久解锁；注意区别于基线层的星尘资源同名）
+ * - prestigeLevel：当前转生等级（转生次数；首次转生后 +1）
+ * - history：转生历史快照列表，每条记录转生时刻的基线层摘要，供转生仪式"成就回顾"展示
+ */
+export interface PrestigeLayer {
+  /** 永久解锁列表——转生后基线层据此获得永久 buff（不随重置清空） */
+  unlocked: string[];
+  /** 星核余额——转生货币（区别于基线层的星尘资源 stardust） */
+  stardust: number;
+  /** 转生等级（即转生次数，首次转生后 +1） */
+  prestigeLevel: number;
+  /** 转生历史快照（按时间顺序，最近的在末尾） */
+  history: PrestigeHistoryEntry[];
+}
+
+/** 转生历史快照条目——记录单次转生时刻的基线层摘要 */
+export interface PrestigeHistoryEntry {
+  /** 第几次转生（从 1 开始，与 prestigeLevel 增量对齐） */
+  sequence: number;
+  /** 转生时间戳 */
+  timestamp: number;
+  /** 转生时基线层快照（用于"成就回顾"） */
+  baselineSnapshot: PrestigeBaselineSnapshot;
+  /** 本次转生获得的星核 */
+  stardustEarned: number;
+}
+
+/** 转生时刻的基线层快照——只保留摘要字段，避免存档随转生次数臃肿 */
+export interface PrestigeBaselineSnapshot {
+  credits: number;
+  stardust: number;
+  crystal: number;
+  isotope: number;
+  antimatter: number;
+  darkmatter: number;
+  facilityLevels: Record<FacilityId, number>;
+  achievementCount: number;
+  researchCount: number;
+  /** 本轮（即将被重置的"一世"）的开始时间 */
+  createdAt: number;
+}
+
+/**
+ * T2-1: 基线层类型——剔除 prestige 字段后的 GameState，即"随转生重置"的部分。
+ * save/ 分层持久化时用它表示存到 'main' 键的基线数据。
+ */
+export type BaselineState = Omit<GameState, 'prestige'>;
 
 export interface ProductionRates {
   excavator: number;

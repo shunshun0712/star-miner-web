@@ -25,7 +25,7 @@ function v1SaveJson(): string {
 }
 
 describe('存档校验', () => {
-  it('序列化与解析往返一致（v6）', () => {
+  it('序列化与解析往返一致（v8）', () => {
     const s = createNewGame(T0);
     const parsed = parseSaveJson(serializeState(s));
     expect(parsed.ok).toBe(true);
@@ -47,11 +47,11 @@ describe('存档校验', () => {
     expect(parsed.state.settings.crystalKeepAmount).toBe(10);
   });
 
-  it('v1 存档迁移到 v7：补齐设施、事件状态、设置与 v0.4 字段', () => {
+  it('v1 存档迁移到 v8：补齐设施、事件状态、设置与 v0.4 字段', () => {
     const r = parseSaveJson(v1SaveJson());
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.state.version).toBe(7);
+    expect(r.state.version).toBe(SAVE_VERSION);
     expect(r.state.facilities.he3Excavator.unlocked).toBe(true);
     expect(r.state.facilities.deuteriumExcavator.unlocked).toBe(false);
     expect(r.state.facilities.energyStation.unlocked).toBe(false);
@@ -68,14 +68,14 @@ describe('存档校验', () => {
     expect(r.state.energyStrategy).toBe('excavation');
   });
 
-  it('v3 存档迁移到 v7：补充默认设置与 v0.4 字段', () => {
+  it('v3 存档迁移到 v8：补充默认设置与 v0.4 字段', () => {
     const raw = JSON.parse(serializeState(createNewGame(T0))) as Record<string, unknown>;
     raw.version = 3;
     delete raw.settings;
     const r = parseSaveJson(JSON.stringify(raw));
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.state.version).toBe(7);
+    expect(r.state.version).toBe(SAVE_VERSION);
     expect(r.state.settings.autoSellStardust).toBe(false);
     expect(r.state.settings.stardustKeepAmount).toBe(50);
     expect(r.state.settings.autoSellCrystal).toBe(false);
@@ -83,7 +83,7 @@ describe('存档校验', () => {
     expect(r.state.facilities.energyStation.unlocked).toBe(false);
   });
 
-  it('v4 存档迁移到 v7：保留旧设置并补默认值', () => {
+  it('v4 存档迁移到 v8：保留旧设置并补默认值', () => {
     const raw = JSON.parse(serializeState(createNewGame(T0))) as Record<string, unknown>;
     const settings = raw.settings as Record<string, unknown>;
     settings.autoSellStardust = true;
@@ -94,14 +94,14 @@ describe('存档校验', () => {
     const r = parseSaveJson(JSON.stringify(raw));
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.state.version).toBe(7);
+    expect(r.state.version).toBe(SAVE_VERSION);
     expect(r.state.settings.autoSellStardust).toBe(true);
     expect(r.state.settings.stardustKeepAmount).toBe(30);
     expect(r.state.settings.autoSellCrystal).toBe(false);
     expect(r.state.settings.crystalKeepAmount).toBe(10);
   });
 
-  it('v5 存档迁移到 v7：补能源站与 v0.4 字段', () => {
+  it('v5 存档迁移到 v8：补能源站与 v0.4 字段', () => {
     const raw = JSON.parse(serializeState(createNewGame(T0))) as Record<string, unknown>;
     raw.version = 5;
     delete (raw.facilities as Record<string, unknown>).energyStation;
@@ -116,7 +116,7 @@ describe('存档校验', () => {
     const r = parseSaveJson(JSON.stringify(raw));
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.state.version).toBe(7);
+    expect(r.state.version).toBe(SAVE_VERSION);
     expect(r.state.facilities.energyStation.unlocked).toBe(false);
     expect(r.state.energy).toBe(0);
     expect(r.state.researchCenterUnlocked).toBe(false);
@@ -192,6 +192,38 @@ describe('存档校验', () => {
     delete (raw.facilities as Record<string, unknown>).refinery;
     const r = parseSaveJson(JSON.stringify(raw));
     expect(r.ok).toBe(false);
+  });
+
+  // ── T2-1: 转生层（v8）校验 ──
+
+  it('缺少转生层拒绝', () => {
+    const raw = JSON.parse(serializeState(createNewGame(T0))) as Record<string, unknown>;
+    delete raw.prestige;
+    const r = parseSaveJson(JSON.stringify(raw));
+    expect(r.ok).toBe(false);
+  });
+
+  it('转生等级为负或非整数拒绝', () => {
+    const s = createNewGame(T0);
+    s.prestige.prestigeLevel = -1;
+    expect(parseSaveJson(serializeState(s)).ok).toBe(false);
+    s.prestige.prestigeLevel = 1.5;
+    expect(parseSaveJson(serializeState(s)).ok).toBe(false);
+  });
+
+  it('星核余额为负拒绝', () => {
+    const s = createNewGame(T0);
+    s.prestige.stardust = -5;
+    expect(parseSaveJson(serializeState(s)).ok).toBe(false);
+  });
+
+  it('unlocked 白名单过滤——未注册 id 被丢弃，已注册保留', () => {
+    const s = createNewGame(T0);
+    s.prestige.unlocked = ['prestige-start-credits', 'fake-evil-id'];
+    const r = parseSaveJson(serializeState(s));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.state.prestige.unlocked).toEqual(['prestige-start-credits']);
   });
 });
 

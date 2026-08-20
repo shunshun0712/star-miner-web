@@ -22,7 +22,7 @@ import { parseSaveJson, serializeState } from './core/save';
 import { createNewGame } from './core/state';
 import { ConsumptionEngine } from './core/consumption';
 import { TransactionalRepository } from './save/transactional';
-import { JsonStateBackend } from './save/stateBackend';
+import { LayeredStateBackend } from './save/layeredBackend';
 import { ReactorRuntime, REACTOR_BUFF_BY_ID, EXPLORATION_TARGET_BY_ID, EXCHANGE_RECIPE_BY_ID } from './core/reactor';
 import { getResource } from './core/resourceRegistry';
 import { registerShortcuts } from './input/shortcuts';
@@ -74,6 +74,8 @@ interface Milestone {
 const milestones: Milestone[] = [];
 
 const repo = new IndexedDbSaveRepository();
+// T2-1: 分层存档后端——基线层('main') + 转生层('prestige') 独立持久化、原子写
+const stateBackend = new LayeredStateBackend(repo);
 const scene = new GameScene();
 let hud: Hud;
 let panel: Panel;
@@ -287,7 +289,7 @@ async function saveNow(reason = '自动'): Promise<void> {
   setSaveStatus('保存中…');
   state.lastSavedAt = Date.now();
   try {
-    await repo.save(serializeState(state));
+    await stateBackend.save(state);
     if (seq === saveSeq) {
       setSaveStatus(`已保存 ${new Date().toLocaleTimeString('zh-CN', { hour12: false })}`);
     }
@@ -572,23 +574,17 @@ async function bootstrap(): Promise<void> {
   applyTokensToCss();
   sfx.initSfx();
   try {
-    const json = await repo.load();
-    if (json) {
-      const parsed = parseSaveJson(json);
-      if (parsed.ok) {
-        state = parsed.state;
-      } else {
-        toast(`读取存档失败：${parsed.error}，已开始新档`, 'error');
-        state = createNewGame(Date.now());
-      }
+    const loaded = await stateBackend.load();
+    if (loaded) {
+      state = loaded;
     } else {
       // IDB 无存档，回退 localStorage 快照（beforeunload/pagehide 紧急保存）
       state = loadFromLocalSnapshot() ?? createNewGame(Date.now());
     }
-  } catch {
-    // IDB 不可用（隐私模式/禁用），尝试 localStorage 快照回退
+  } catch (e) {
+    // IDB 不可用（隐私模式/禁用）或转生层损坏——尝试 localStorage 快照回退
     state = loadFromLocalSnapshot() ?? createNewGame(Date.now());
-    toast('无法读取浏览器存档，已尝试恢复快照', 'error');
+    toast(`无法读取浏览器存档：${e instanceof Error ? e.message : '未知错误'}，已尝试恢复快照`, 'error');
   }
 
   applyPanelTexture();
@@ -627,7 +623,7 @@ async function bootstrap(): Promise<void> {
   });
 
   // T1-2 同位素反应堆系统：ConsumptionEngine → ReactorRuntime → ReactorPanel
-  const stateBackend = new JsonStateBackend(repo);
+  // T2-1: 事务后端改用分层存档（基线层 + 转生层），消费引擎与转生重置共用同一持久化路径
   const txRepo = new TransactionalRepository<GameState>(stateBackend, structuredClone);
   const consumptionEngine = new ConsumptionEngine(txRepo);
   reactorRuntime = new ReactorRuntime(consumptionEngine);
@@ -751,7 +747,7 @@ async function bootstrap(): Promise<void> {
   window.addEventListener('beforeunload', () => {
     state.lastSavedAt = Date.now();
     writeLocalSnapshot(state);
-    void repo.save(serializeState(state));
+    void stateBackend.save(state);
     stopAutosave();
   });
 

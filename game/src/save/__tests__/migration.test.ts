@@ -6,6 +6,7 @@ import {
   migrateV4ToV5,
   migrateV5ToV6,
   migrateV6ToV7,
+  migrateV7ToV8,
   parseSaveJson,
   validateState,
 } from '../../core/save';
@@ -58,6 +59,10 @@ function v6Save(): Record<string, unknown> {
 
 function v7Save(): Record<string, unknown> {
   return migrateV6ToV7(v6Save());
+}
+
+function v8Save(): Record<string, unknown> {
+  return migrateV7ToV8(v7Save());
 }
 
 // ── 辅助：将 Record 断言为 v6 合法存档并走完整校验 ──
@@ -347,15 +352,45 @@ describe('迁移 v5 → v6', () => {
 // v1 → v6 全链
 // ════════════════════════════════════════════
 
-describe('全链迁移 v1 → v7', () => {
-  it('单步顺序迁移 v1→v2→v3→v4→v5→v6→v7 等价于 parseSaveJson', () => {
-    const stepwise = migrateV6ToV7(migrateV5ToV6(migrateV4ToV5(migrateV3ToV4(migrateV2ToV3(migrateV1ToV2(v1Save()))))));
+describe('迁移 v7 → v8', () => {
+  it('版本号升级到 8', () => {
+    const r = migrateV7ToV8(v7Save());
+    expect(r.version).toBe(8);
+  });
+
+  it('补空转生层（prestigeLevel=0, stardust=0, unlocked=[]）', () => {
+    const r = migrateV7ToV8(v7Save());
+    const p = r.prestige as Record<string, unknown>;
+    expect(p.prestigeLevel).toBe(0);
+    expect(p.stardust).toBe(0);
+    expect(p.unlocked).toEqual([]);
+    expect(p.history).toEqual([]);
+  });
+
+  it('v7 存档经迁移后通过 validateState', () => {
+    const r = parseSaveJson(JSON.stringify(v7Save()));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.state.version).toBe(SAVE_VERSION);
+    expect(r.state.prestige.prestigeLevel).toBe(0);
+    expect(r.state.prestige.unlocked).toEqual([]);
+  });
+
+  it('v7 存档已含 consumptionLog 不被破坏', () => {
+    const r = migrateV7ToV8(v7Save());
+    expect((r as Record<string, unknown>).consumptionLog).toBeDefined();
+  });
+});
+
+describe('全链迁移 v1 → v8', () => {
+  it('单步顺序迁移 v1→v2→v3→v4→v5→v6→v7→v8 等价于 parseSaveJson', () => {
+    const stepwise = migrateV7ToV8(migrateV6ToV7(migrateV5ToV6(migrateV4ToV5(migrateV3ToV4(migrateV2ToV3(migrateV1ToV2(v1Save())))))));
     const viaParse = parseSaveJson(JSON.stringify(v1Save()));
     expect(viaParse.ok).toBe(true);
     if (!viaParse.ok) return;
     // 逐字段对比（parseSaveJson 内部会走 migrate + validate + 白名单过滤）
-    expect(stepwise.version).toBe(7);
-    expect(viaParse.state.version).toBe(7);
+    expect(stepwise.version).toBe(8);
+    expect(viaParse.state.version).toBe(8);
     expect(stepwise.credits).toBe(viaParse.state.credits);
     expect(stepwise.stardust).toBe(viaParse.state.stardust);
   });
@@ -375,13 +410,14 @@ describe('全链迁移 v1 → v7', () => {
     expect(r.state.credits).toBe(123);
     expect(r.state.settings.autoSellStardust).toBe(false);
     expect(r.state.settings.crystalKeepAmount).toBe(DEFAULT_CRYSTAL_KEEP);
+    expect(r.state.prestige.prestigeLevel).toBe(0);
   });
 
   it('v2 存档经全链迁移后通过 validateState', () => {
     const r = parseToV6(v2Save());
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.state.version).toBe(7);
+    expect(r.state.version).toBe(SAVE_VERSION);
     expect(r.state.facilities.deuteriumExcavator).toBeDefined();
     expect(r.state.facilities.energyStation).toBeDefined();
   });
@@ -390,7 +426,7 @@ describe('全链迁移 v1 → v7', () => {
     const r = parseToV6(v3Save());
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.state.version).toBe(7);
+    expect(r.state.version).toBe(SAVE_VERSION);
     expect(r.state.settings.autoSellStardust).toBe(false);
   });
 
@@ -398,7 +434,7 @@ describe('全链迁移 v1 → v7', () => {
     const r = parseToV6(v4Save());
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.state.version).toBe(7);
+    expect(r.state.version).toBe(SAVE_VERSION);
     expect(r.state.settings.autoSellCrystal).toBe(false);
   });
 
@@ -406,17 +442,17 @@ describe('全链迁移 v1 → v7', () => {
     const r = parseToV6(v5Save());
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.state.version).toBe(7);
+    expect(r.state.version).toBe(SAVE_VERSION);
     expect(r.state.facilities.energyStation.unlocked).toBe(false);
   });
 
-  it('createNewGame 产生的 v6 存档往返一致', () => {
+  it('createNewGame 产生的存档往返一致', () => {
     const s = createNewGame(T0);
     const r = parseSaveJson(JSON.stringify(s));
     expect(r.ok).toBe(true);
   });
 
-  it('各版本存档均能迁移到 v7 且通过校验', () => {
+  it('各版本存档均能迁移到 v8 且通过校验', () => {
     for (const [label, raw] of [
       ['v1', v1Save()],
       ['v2', v2Save()],
@@ -425,11 +461,12 @@ describe('全链迁移 v1 → v7', () => {
       ['v5', v5Save()],
       ['v6', v6Save()],
       ['v7', v7Save()],
+      ['v8', v8Save()],
     ] as const) {
       const r = parseToV6(raw);
       expect(r.ok, `${label} 迁移失败`).toBe(true);
       if (r.ok) {
-        expect(r.state.version, `${label} 版本不为 7`).toBe(7);
+        expect(r.state.version, `${label} 版本不为 8`).toBe(8);
       }
     }
   });

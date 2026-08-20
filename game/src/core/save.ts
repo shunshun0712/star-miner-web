@@ -9,8 +9,9 @@ import {
   SAVE_VERSION,
   TECH_BY_ID,
 } from './config';
-import type { EventKind, EventState, GameState, LifetimeStats } from './types';
+import type { EventKind, EventState, GameState, LifetimeStats, PrestigeLayer } from './types';
 import { createEmptyConsumptionLog } from './consumptionLog';
+import { createEmptyPrestigeLayer, isRegisteredPrestigeUnlock } from './prestigeLayer';
 
 export type ParseResult = { ok: true; state: GameState } | { ok: false; error: string };
 
@@ -124,6 +125,17 @@ export function migrateV6ToV7(raw: Record<string, unknown>): Record<string, unkn
   };
 }
 
+export function migrateV7ToV8(raw: Record<string, unknown>): Record<string, unknown> {
+  // T2-1: v7 存档无转生层，自动获得空 prestige 层（prestigeLevel=0, stardust=0, unlocked=[])。
+  // 分层存档（save/layeredBackend）下，'main' 键的基线 JSON 不含 prestige 字段；
+  // load 时 LayeredStateBackend 会把独立的 'prestige' 键并入，再走本迁移链兜底。
+  return {
+    ...raw,
+    version: 8,
+    prestige: createEmptyPrestigeLayer(),
+  };
+}
+
 function migrate(raw: Record<string, unknown>): unknown {
   let s: Record<string, unknown> = { ...raw };
   if (s.version === 1) s = migrateV1ToV2(s);
@@ -132,6 +144,7 @@ function migrate(raw: Record<string, unknown>): unknown {
   if (s.version === 4) s = migrateV4ToV5(s);
   if (s.version === 5) s = migrateV5ToV6(s);
   if (s.version === 6) s = migrateV6ToV7(s);
+  if (s.version === 7) s = migrateV7ToV8(s);
   return s;
 }
 
@@ -186,6 +199,54 @@ export function validateConsumptionLog(rawIn: unknown): string | null {
   return null;
 }
 
+/**
+ * T2-1: 校验转生层结构——返回错误信息或 null（合法）。
+ *
+ * 字段约束：
+ * - unlocked：string[]，仅保留 PRESTIGE_UNLOCKS 白名单内的 id（防恶意存档注入）
+ * - stardust：星核余额，非负有限数
+ * - prestigeLevel：转生等级，非负整数
+ * - history：快照条目数组，每条 sequence/timestamp/stardustEarned/snapshot 合法
+ */
+export function validatePrestigeLayer(rawIn: unknown): string | null {
+  if (typeof rawIn !== 'object' || rawIn === null) return '存档缺少转生层';
+  const p = rawIn as Record<string, unknown>;
+
+  if (!Array.isArray(p.unlocked)) return '转生层解锁列表非法';
+  for (const id of p.unlocked as unknown[]) {
+    if (typeof id !== 'string') return '转生层解锁项非法';
+  }
+  if (!isFiniteNumber(p.stardust) || (p.stardust as number) < 0) return '转生层星核余额非法';
+  if (!isFiniteNumber(p.prestigeLevel) || !Number.isInteger(p.prestigeLevel) || (p.prestigeLevel as number) < 0) {
+    return '转生层等级非法';
+  }
+  if (!Array.isArray(p.history)) return '转生层历史快照非法';
+  for (const h of p.history as unknown[]) {
+    if (typeof h !== 'object' || h === null) return '转生层历史条目非法';
+    const entry = h as Record<string, unknown>;
+    if (!isFiniteNumber(entry.sequence) || !Number.isInteger(entry.sequence) || (entry.sequence as number) < 1) {
+      return '转生层历史 sequence 非法';
+    }
+    if (!isFiniteNumber(entry.timestamp)) return '转生层历史 timestamp 非法';
+    if (!isFiniteNumber(entry.stardustEarned) || (entry.stardustEarned as number) < 0) {
+      return '转生层历史 stardustEarned 非法';
+    }
+    const snap = entry.baselineSnapshot;
+    if (typeof snap !== 'object' || snap === null) return '转生层历史快照非法';
+    const s = snap as Record<string, unknown>;
+    for (const k of ['credits', 'stardust', 'crystal', 'isotope', 'antimatter', 'darkmatter', 'createdAt'] as const) {
+      if (!isFiniteNumber(s[k])) return `转生层历史快照 ${k} 非法`;
+    }
+    if (typeof s.facilityLevels !== 'object' || s.facilityLevels === null) return '转生层历史快照 facilityLevels 非法';
+    for (const v of Object.values(s.facilityLevels as Record<string, unknown>)) {
+      if (!isFiniteNumber(v) || (v as number) < 1) return '转生层历史快照 facilityLevels 值非法';
+    }
+    if (!isFiniteNumber(s.achievementCount) || (s.achievementCount as number) < 0) return '转生层历史快照 achievementCount 非法';
+    if (!isFiniteNumber(s.researchCount) || (s.researchCount as number) < 0) return '转生层历史快照 researchCount 非法';
+  }
+  return null;
+}
+
 export function validateState(rawIn: unknown): ParseResult {
   if (typeof rawIn !== 'object' || rawIn === null) return { ok: false, error: '存档不是有效的对象' };
   const migrated = migrate(rawIn as Record<string, unknown>);
@@ -209,6 +270,13 @@ export function validateState(rawIn: unknown): ParseResult {
   // T1-4: 校验 consumptionLog（v7 新增）——只持久化活跃 buff/进行中任务
   const clogErr = validateConsumptionLog(s.consumptionLog);
   if (clogErr !== null) return { ok: false, error: clogErr };
+
+  // T2-1: 校验转生层（v8 新增）——独立持久化、跨转生保留
+  const prestigeErr = validatePrestigeLayer(s.prestige);
+  if (prestigeErr !== null) return { ok: false, error: prestigeErr };
+  // M4 惯例：过滤掉不在 PRESTIGE_UNLOCKS 白名单内的 unlocked id，防恶意存档注入
+  const prestige = s.prestige as PrestigeLayer;
+  prestige.unlocked = prestige.unlocked.filter((id) => isRegisteredPrestigeUnlock(id));
 
   if (typeof s.facilities !== 'object' || s.facilities === null) {
     return { ok: false, error: '存档缺少设施数据' };
