@@ -90,3 +90,26 @@ export interface ProductionSummary {
   bottlenecks: FacilityId[];
   transportCongested: boolean;
 }
+
+// ===== M1 v0.5: Resource Schema & Config Schema Versioning =====
+
+export type ResourceCategory = 'currency' | 'material' | 'energy' | 'rare' | 'intermediate';
+
+/**
+ * 可注册的资源 schema。描述一种资源类型的元数据，供资源注册表统一管理。
+ * v0.5 只注册 schema 不配 T3/T4 数值（数值平衡留 v0.6）。
+ */
+export interface ResourceSchema {
+  id: string;
+  name: string;
+  description: string;
+  category: ResourceCategory;
+  /** 是否可出售换取信用点 */
+  sellable: boolean;
+  /** 是否可被设施/科技节点消耗 */
+  consumable: boolean;
+  /** 映射到 GameState 的数值属性名，consumable/sellable 资源必填 */
+  stateKey?: keyof GameState;
+  /** 该资源 schema 的版本号，用于前向兼容检测 */
+  schemaVersion: number;
+}

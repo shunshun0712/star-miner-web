@@ -4,9 +4,10 @@ import type {
   FacilityId,
   ResearchBranch,
   ResourceId,
+  ResourceSchema,
 } from './types';
 
-export const GAME_VERSION = 'v0.4';
+export const GAME_VERSION = 'v0.5';
 export const SAVE_VERSION = 6;
 export const MAX_LEVEL = 5;
 export const OFFLINE_CAP_MS = 8 * 3600 * 1000;
@@ -34,6 +35,95 @@ export const INVEST_COST = 200;
 export const INVEST_BOOST = 0.05;
 export const DEFAULT_STARDUST_KEEP = 50;
 export const DEFAULT_CRYSTAL_KEEP = 10;
+
+// ===== M1 v0.5: Schema 版本化 =====
+
+/** 资源 schema 版本号——当 RESOURCE_SCHEMAS 结构变更时递增 */
+export const RESOURCE_SCHEMA_VERSION = 1;
+/** 科技节点 schema 版本号——当 TECH_NODES 结构变更时递增 */
+export const NODE_SCHEMA_VERSION = 1;
+/** 整体 config schema 版本号——聚合 resource + node 版本 */
+export const CONFIG_SCHEMA_VERSION = 1;
+
+/**
+ * 现有三资源（信用点/晶体/同位素）的 schema 定义。
+ * v0.5 只注册 schema 不配 T3/T4 数值（数值平衡留 v0.6）。
+ * 新增资源类型只需在此追加 schema + 在 resourceRegistry 调用 registerResource。
+ */
+export const RESOURCE_SCHEMAS: ResourceSchema[] = [
+  {
+    id: 'credits',
+    name: '信用点',
+    description: '星际通用货币，用于解锁设施、升级和研究',
+    category: 'currency',
+    sellable: false,
+    consumable: true,
+    stateKey: 'credits',
+    schemaVersion: 1,
+  },
+  {
+    id: 'crystal',
+    name: '晶体',
+    description: '精炼星尘得到的晶体，用于高级升级和科技研究',
+    category: 'material',
+    sellable: true,
+    consumable: true,
+    stateKey: 'crystal',
+    schemaVersion: 1,
+  },
+  {
+    id: 'isotope',
+    name: '同位素',
+    description: '稀有矿同位素，T3/T4 节点消耗预留资源',
+    category: 'rare',
+    sellable: false,
+    consumable: true,
+    stateKey: 'isotope',
+    schemaVersion: 1,
+  },
+];
+
+/**
+ * 启动时校验 config schema 完整性：
+ * 1. 资源 schema 版本号不超过 RESOURCE_SCHEMA_VERSION
+ * 2. 科技节点 requires 引用都指向已定义节点
+ * 3. 科技节点 ID 无重复
+ */
+export function validateConfigSchema(): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  // 校验资源 schema 版本兼容性
+  for (const schema of RESOURCE_SCHEMAS) {
+    if (schema.schemaVersion > RESOURCE_SCHEMA_VERSION) {
+      errors.push(
+        `资源 ${schema.id} schema 版本 ${schema.schemaVersion} 高于当前 RESOURCE_SCHEMA_VERSION ${RESOURCE_SCHEMA_VERSION}`,
+      );
+    }
+    if (schema.consumable && !schema.stateKey) {
+      errors.push(`可消耗资源 ${schema.id} 缺少 stateKey 映射`);
+    }
+  }
+
+  // 校验科技节点 ID 唯一性
+  const techIds = new Set<string>();
+  for (const node of TECH_NODES) {
+    if (techIds.has(node.id)) {
+      errors.push(`科技节点 ID 重复: ${node.id}`);
+    }
+    techIds.add(node.id);
+  }
+
+  // 校验科技节点 requires 引用有效性
+  for (const node of TECH_NODES) {
+    for (const req of node.requires) {
+      if (!techIds.has(req)) {
+        errors.push(`科技节点 ${node.id} 的前置依赖 ${req} 不存在`);
+      }
+    }
+  }
+
+  return { valid: errors.length === 0, errors };
+}
 
 // 研究中心与科技树
 export const RESEARCH_CENTER_UNLOCK_CRYSTALS = 50;
