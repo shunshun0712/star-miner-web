@@ -10,6 +10,7 @@ import {
   TECH_BY_ID,
 } from './config';
 import type { EventKind, EventState, GameState, LifetimeStats } from './types';
+import { createEmptyConsumptionLog } from './consumptionLog';
 
 export type ParseResult = { ok: true; state: GameState } | { ok: false; error: string };
 
@@ -113,6 +114,16 @@ export function migrateV5ToV6(raw: Record<string, unknown>): Record<string, unkn
   };
 }
 
+export function migrateV6ToV7(raw: Record<string, unknown>): Record<string, unknown> {
+  // T1-4: v6 无消耗持久化，新增空 consumptionLog；版本号升到 7。
+  // v6 旧存档的 antimatter/darkmatter 回填沿用 validateState 既有的 T1-3 逻辑（迁移后兜底）。
+  return {
+    ...raw,
+    version: 7,
+    consumptionLog: createEmptyConsumptionLog(),
+  };
+}
+
 function migrate(raw: Record<string, unknown>): unknown {
   let s: Record<string, unknown> = { ...raw };
   if (s.version === 1) s = migrateV1ToV2(s);
@@ -120,11 +131,59 @@ function migrate(raw: Record<string, unknown>): unknown {
   if (s.version === 3) s = migrateV3ToV4(s);
   if (s.version === 4) s = migrateV4ToV5(s);
   if (s.version === 5) s = migrateV5ToV6(s);
+  if (s.version === 6) s = migrateV6ToV7(s);
   return s;
 }
 
 function isStringArray(v: unknown): v is string[] {
   return Array.isArray(v) && v.every((x) => typeof x === 'string');
+}
+
+const CONSUMPTION_LOG_KINDS = ['buff', 'exploration', 'exchange'] as const;
+
+/** T1-4: 校验 consumptionLog 结构——返回错误信息或 null（合法） */
+export function validateConsumptionLog(rawIn: unknown): string | null {
+  if (typeof rawIn !== 'object' || rawIn === null) return '存档缺少消耗日志';
+  const log = rawIn as Record<string, unknown>;
+
+  if (!Array.isArray(log.active)) return '消耗日志活跃列表非法';
+  for (const e of log.active as unknown[]) {
+    if (typeof e !== 'object' || e === null) return '消耗日志条目非法';
+    const entry = e as Record<string, unknown>;
+    if (typeof entry.id !== 'string') return '消耗日志条目 id 非法';
+    if (typeof entry.kind !== 'string' || !(CONSUMPTION_LOG_KINDS as readonly string[]).includes(entry.kind)) {
+      return '消耗日志条目 kind 非法';
+    }
+    if (typeof entry.resourceId !== 'string') return '消耗日志条目 resourceId 非法';
+    if (!isFiniteNumber(entry.amount) || (entry.amount as number) < 0) return '消耗日志条目 amount 非法';
+    if (!Array.isArray(entry.produced)) return '消耗日志条目 produced 非法';
+    for (const p of entry.produced as unknown[]) {
+      if (typeof p !== 'object' || p === null) return '消耗日志产出条目非法';
+      const pe = p as Record<string, unknown>;
+      if (typeof pe.resourceId !== 'string') return '消耗日志产出 resourceId 非法';
+      if (!isFiniteNumber(pe.amount) || (pe.amount as number) < 0) return '消耗日志产出 amount 非法';
+    }
+    if (!isFiniteNumber(entry.timestamp)) return '消耗日志条目 timestamp 非法';
+    if (entry.expiresAt !== undefined && !isFiniteNumber(entry.expiresAt)) return '消耗日志条目 expiresAt 非法';
+    if (entry.idempotencyKey !== undefined && typeof entry.idempotencyKey !== 'string') {
+      return '消耗日志条目 idempotencyKey 非法';
+    }
+  }
+
+  const agg = log.aggregate;
+  if (typeof agg !== 'object' || agg === null) return '消耗日志聚合非法';
+  const a = agg as Record<string, unknown>;
+  if (!isFiniteNumber(a.completedEvents) || (a.completedEvents as number) < 0) {
+    return '消耗日志聚合 completedEvents 非法';
+  }
+  for (const mapKey of ['consumedByResource', 'producedByResource'] as const) {
+    const m = a[mapKey];
+    if (typeof m !== 'object' || m === null) return `消耗日志聚合 ${mapKey} 非法`;
+    for (const v of Object.values(m as Record<string, unknown>)) {
+      if (!isFiniteNumber(v) || (v as number) < 0) return `消耗日志聚合 ${mapKey} 值非法`;
+    }
+  }
+  return null;
 }
 
 export function validateState(rawIn: unknown): ParseResult {
@@ -146,6 +205,10 @@ export function validateState(rawIn: unknown): ParseResult {
       return { ok: false, error: `资源 ${res} 不能为负数或非法值` };
     }
   }
+
+  // T1-4: 校验 consumptionLog（v7 新增）——只持久化活跃 buff/进行中任务
+  const clogErr = validateConsumptionLog(s.consumptionLog);
+  if (clogErr !== null) return { ok: false, error: clogErr };
 
   if (typeof s.facilities !== 'object' || s.facilities === null) {
     return { ok: false, error: '存档缺少设施数据' };

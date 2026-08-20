@@ -1164,3 +1164,299 @@ button {
 #right-panel > .panel-card {
   flex: 0 0 auto;
 }
+
+
+
+/* ===== T1-2 同位素反应堆面板 ===== */
+
+.reactor-held {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(167, 139, 250, 0.05);
+}
+
+.rh-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.rh-label {
+  color: var(--muted);
+}
+
+.rh-val {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.rh-val.cyan {
+  color: var(--cyan);
+}
+
+.rh-val.purple {
+  color: var(--purple);
+}
+
+.reactor-status {
+  margin-left: auto;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: var(--radius);
+}
+
+.reactor-status.muted {
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+
+.reactor-status.active {
+  color: var(--cyan);
+  border: 1px solid rgba(63, 224, 216, 0.5);
+  background: rgba(63, 224, 216, 0.08);
+  animation: reactor-pulse 2s ease-in-out infinite;
+}
+
+@keyframes reactor-pulse {
+  0%, 100% { box-shadow: 0 0 4px rgba(63, 224, 216, 0.2); }
+  50% { box-shadow: 0 0 10px rgba(63, 224, 216, 0.45); }
+}
+
+.reactor-section {
+  margin-bottom: 12px;
+}
+
+.reactor-h3 {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 6px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid var(--line);
+}
+
+/* buff 行 */
+.buff-row {
+  padding: 8px;
+  margin-bottom: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.buff-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.buff-name {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.buff-cost {
+  font-size: 11px;
+  color: var(--purple);
+}
+
+.buff-desc {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 2px 0 6px;
+}
+
+.buff-active {
+  margin-bottom: 6px;
+}
+
+.buff-bar-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.buff-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--cyan), var(--purple));
+  transition: width 0.3s linear;
+}
+
+.buff-remain {
+  display: block;
+  font-size: 10px;
+  color: var(--cyan);
+  margin-top: 2px;
+}
+
+.buff-btn {
+  width: 100%;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.buff-btn.running {
+  border-color: var(--cyan);
+  background: rgba(63, 224, 216, 0.1);
+  color: var(--cyan);
+}
+
+/* 探索目标选择 */
+#reactor-targets {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.target-btn {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text);
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.target-btn:hover:not(:disabled) {
+  border-color: var(--cyan);
+  background: rgba(63, 224, 216, 0.08);
+}
+
+.target-btn.selected {
+  border-color: var(--cyan);
+  background: rgba(63, 224, 216, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(63, 224, 216, 0.3);
+}
+
+.target-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.target-name {
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.target-meta {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.dispatch-btn {
+  width: 100%;
+  margin-bottom: 6px;
+}
+
+/* 探索进度环 */
+.reactor-explore-status {
+  min-height: 60px;
+}
+
+.explore-active {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(63, 224, 216, 0.04);
+}
+
+.explore-ring {
+  flex-shrink: 0;
+  transform: rotate(-90deg);
+}
+
+.explore-ring-bg {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 3;
+}
+
+.explore-ring-fg {
+  fill: none;
+  stroke: var(--cyan);
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.3s linear;
+  filter: drop-shadow(0 0 4px rgba(63, 224, 216, 0.4));
+}
+
+.explore-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.explore-label {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.explore-remain {
+  font-size: 11px;
+  color: var(--cyan);
+}
+
+/* 兑换行 */
+.exchange-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.exchange-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.exchange-name {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.exchange-flow {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.exchange-btn {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+/* 反应堆面板纳入统一倒角规则 */
+.reactor-held,
+.buff-row,
+.target-btn,
+.explore-active,
+.exchange-row {
+  border-radius: var(--radius);
+}
+
+/* 导航栏反应堆按钮特殊样式 */
+.nav-btn[data-page="reactor"] .nav-icon {
+  color: var(--purple);
+}

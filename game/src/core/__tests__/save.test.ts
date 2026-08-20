@@ -47,11 +47,11 @@ describe('存档校验', () => {
     expect(parsed.state.settings.crystalKeepAmount).toBe(10);
   });
 
-  it('v1 存档迁移到 v6：补齐设施、事件状态、设置与 v0.4 字段', () => {
+  it('v1 存档迁移到 v7：补齐设施、事件状态、设置与 v0.4 字段', () => {
     const r = parseSaveJson(v1SaveJson());
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.state.version).toBe(6);
+    expect(r.state.version).toBe(7);
     expect(r.state.facilities.he3Excavator.unlocked).toBe(true);
     expect(r.state.facilities.deuteriumExcavator.unlocked).toBe(false);
     expect(r.state.facilities.energyStation.unlocked).toBe(false);
@@ -68,14 +68,14 @@ describe('存档校验', () => {
     expect(r.state.energyStrategy).toBe('excavation');
   });
 
-  it('v3 存档迁移到 v6：补充默认设置与 v0.4 字段', () => {
+  it('v3 存档迁移到 v7：补充默认设置与 v0.4 字段', () => {
     const raw = JSON.parse(serializeState(createNewGame(T0))) as Record<string, unknown>;
     raw.version = 3;
     delete raw.settings;
     const r = parseSaveJson(JSON.stringify(raw));
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.state.version).toBe(6);
+    expect(r.state.version).toBe(7);
     expect(r.state.settings.autoSellStardust).toBe(false);
     expect(r.state.settings.stardustKeepAmount).toBe(50);
     expect(r.state.settings.autoSellCrystal).toBe(false);
@@ -83,7 +83,7 @@ describe('存档校验', () => {
     expect(r.state.facilities.energyStation.unlocked).toBe(false);
   });
 
-  it('v4 存档迁移到 v6：保留旧设置并补默认值', () => {
+  it('v4 存档迁移到 v7：保留旧设置并补默认值', () => {
     const raw = JSON.parse(serializeState(createNewGame(T0))) as Record<string, unknown>;
     const settings = raw.settings as Record<string, unknown>;
     settings.autoSellStardust = true;
@@ -94,14 +94,14 @@ describe('存档校验', () => {
     const r = parseSaveJson(JSON.stringify(raw));
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.state.version).toBe(6);
+    expect(r.state.version).toBe(7);
     expect(r.state.settings.autoSellStardust).toBe(true);
     expect(r.state.settings.stardustKeepAmount).toBe(30);
     expect(r.state.settings.autoSellCrystal).toBe(false);
     expect(r.state.settings.crystalKeepAmount).toBe(10);
   });
 
-  it('v5 存档迁移到 v6：补能源站与 v0.4 字段', () => {
+  it('v5 存档迁移到 v7：补能源站与 v0.4 字段', () => {
     const raw = JSON.parse(serializeState(createNewGame(T0))) as Record<string, unknown>;
     raw.version = 5;
     delete (raw.facilities as Record<string, unknown>).energyStation;
@@ -116,7 +116,7 @@ describe('存档校验', () => {
     const r = parseSaveJson(JSON.stringify(raw));
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.state.version).toBe(6);
+    expect(r.state.version).toBe(7);
     expect(r.state.facilities.energyStation.unlocked).toBe(false);
     expect(r.state.energy).toBe(0);
     expect(r.state.researchCenterUnlocked).toBe(false);

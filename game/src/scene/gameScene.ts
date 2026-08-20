@@ -9,6 +9,7 @@ import { easeOutBackUpgrade } from '../art/easing';
 import { buildExcavator, type ExcavatorAnim } from './facilities/excavator';
 import { buildTransportHub } from './facilities/transport';
 import { TransportTracks } from './tracks';
+import { ReactorFX } from './reactorFX';
 
 export interface SceneSyncState {
   statuses: Record<FacilityId, FacilityStatus>;
@@ -16,6 +17,8 @@ export interface SceneSyncState {
   transportActivity: number;
   bottlenecks: FacilityId[];
   transportCongested: boolean;
+  /** T1-2：反应堆运行态活动度 0..1，驱动 ReactorFX 粒子流强度 */
+  reactorActivity: number;
 }
 
 const STATUS_COLORS: Record<FacilityStatus, number> = {
@@ -58,6 +61,9 @@ export class GameScene {
   private groundTex: THREE.Texture | null = null;
   private hullTex: THREE.Texture | null = null;
   private tracks: TransportTracks | null = null;
+  /** T1-2：同位素反应堆视觉（粒子流 + 脉动核心） */
+  private reactorFX: ReactorFX | null = null;
+  private reactorActivity = 0;
   private transportCongested = false;
   private raycaster = new THREE.Raycaster();
   private pointer = new THREE.Vector2();
@@ -145,6 +151,7 @@ export class GameScene {
     this.buildGround();
     this.buildFacilities();
     this.buildTracks();
+    this.buildReactor();
 
     renderer.domElement.addEventListener('pointerdown', this.onPointerDown);
     renderer.domElement.addEventListener('pointermove', this.onPointerMove);
@@ -182,6 +189,9 @@ export class GameScene {
     }
     this.visuals.clear();
     this.tracks = null;
+
+    this.reactorFX?.dispose();
+    this.reactorFX = null;
 
     // M3：释放共享材质缓存（cache + 单例），并在释放后重建，供 reinit 重新构建时使用
     materials.disposeAll();
@@ -241,6 +251,8 @@ export class GameScene {
     this.activity = s.transportActivity;
     this.bottlenecks = s.bottlenecks;
     this.transportCongested = s.transportCongested;
+    this.reactorActivity = s.reactorActivity;
+    this.reactorFX?.setActivity(this.reactorActivity);
   }
 
   dispose(): void {
@@ -518,6 +530,13 @@ export class GameScene {
     this.scene.add(this.tracks.group);
   }
 
+  /** T1-2：构建同位素反应堆视觉，放置于场景右后侧 */
+  private buildReactor(): void {
+    this.reactorFX = new ReactorFX();
+    this.reactorFX.group.position.set(16, 0, 8);
+    this.scene.add(this.reactorFX.group);
+  }
+
   private buildLabel(id: FacilityId): void {
     if (!this.labelsLayer) return;
     const label = document.createElement('div');
@@ -627,6 +646,7 @@ export class GameScene {
     }
 
     this.tracks?.update(dt, this.activity, this.transportCongested, this.selected);
+    this.reactorFX?.update(dt, this.elapsed);
 
     this.controls?.update();
     this.updateLabels();

@@ -17,9 +17,14 @@ import { maybeSpawnEvent, resolveEvent } from './core/events';
 import { formatDuration, formatNumber } from './core/format';
 import { settleOffline } from './core/offline';
 import { rateFor, tickProduction } from './core/production';
-import { researchTech } from './core/research';
+import { hasResearch, researchTech } from './core/research';
 import { parseSaveJson, serializeState } from './core/save';
 import { createNewGame } from './core/state';
+import { ConsumptionEngine } from './core/consumption';
+import { TransactionalRepository } from './save/transactional';
+import { JsonStateBackend } from './save/stateBackend';
+import { ReactorRuntime, REACTOR_BUFF_BY_ID, EXPLORATION_TARGET_BY_ID, EXCHANGE_RECIPE_BY_ID } from './core/reactor';
+import { getResource } from './core/resourceRegistry';
 import { registerShortcuts } from './input/shortcuts';
 import { downloadCsvFile, downloadSaveFile, importSaveFile } from './save/jsonTransfer';
 import { IndexedDbSaveRepository } from './save/indexeddb';
@@ -28,6 +33,7 @@ import { applyTokensToCss } from './art/tokens';
 import * as sfx from './audio/sfx';
 import { Hud } from './ui/hud';
 import { Panel } from './ui/panel';
+import { ReactorPanel } from './ui/reactorPanel';
 import { applyPanelTexture } from './ui/panelTexture';
 import {
   showAchievementsModal,
@@ -71,6 +77,8 @@ const repo = new IndexedDbSaveRepository();
 const scene = new GameScene();
 let hud: Hud;
 let panel: Panel;
+let reactorPanel: ReactorPanel;
+let reactorRuntime: ReactorRuntime;
 
 function byId<T extends HTMLElement = HTMLElement>(id: string): T {
   const el = document.getElementById(id);
@@ -109,6 +117,7 @@ function buildSceneSync(): SceneSyncState {
     transportActivity: Math.min(1, rateFor(state, 'transport') / 1.0),
     bottlenecks: lastSummary?.bottlenecks ?? [],
     transportCongested: lastSummary?.transportCongested ?? false,
+    reactorActivity: reactorRuntime?.reactorActivity(Date.now()) ?? 0,
   };
 }
 
@@ -472,14 +481,63 @@ function handleExportCsv(): void {
   toast('节奏数据已导出');
 }
 
+/** 从资源注册表取展示名，未注册时回退 id 本身 */
+function getResourceName(resourceId: string): string {
+  return getResource(resourceId)?.name ?? resourceId;
+}
+
+/**
+ * 反应堆 buff 产出加成——后置补偿法：
+ * tickProduction 已完成本步产出（producedStardust / refinedCrystal），
+ * 此处按活跃 buff 倍率将「超出基准 1× 的部分」补入 state，保持与生产链解耦。
+ * 墙钟驱动：now 由调用方传入，不读 Date.now。
+ */
+function applyReactorBonus(now: number): void {
+  if (!reactorRuntime || !lastSummary) return;
+  const stardustMult = reactorRuntime.getProductionMult('stardust', now);
+  if (stardustMult > 1) {
+    const bonus = lastSummary.producedStardust * (stardustMult - 1);
+    if (bonus > 0) {
+      state.stardust = Math.max(0, state.stardust + bonus);
+      state.stats.totalStardustProduced += bonus;
+    }
+  }
+  const crystalMult = reactorRuntime.getProductionMult('crystal', now);
+  if (crystalMult > 1) {
+    const bonus = lastSummary.refinedCrystal * (crystalMult - 1);
+    if (bonus > 0) {
+      state.crystal = Math.max(0, state.crystal + bonus);
+      state.stats.totalCrystalProduced += bonus;
+    }
+  }
+}
+
+/** 反应堆面板可见性：仅当同位素开采研究完成后展示 */
+function updateReactorVisibility(): void {
+  if (!reactorPanel) return;
+  reactorPanel.setVisible(hasResearch(state, 'rareIsotopeMining'));
+}
+
 function frame(now: number): void {
   const dt = Math.min(now - lastFrame, 500);
   lastFrame = now;
   acc += dt;
   while (acc >= STEP_MS) {
-    lastSummary = tickProduction(state, STEP_MS, { now: Date.now() });
+    const stepNow = Date.now();
+    lastSummary = tickProduction(state, STEP_MS, { now: stepNow });
     acc -= STEP_MS;
     applyAutoSell(state);
+    applyReactorBonus(stepNow);
+    // 反应堆运行时结算（过期 buff / 完成探索）——墙钟驱动，与 Three.js 渲染循环解耦
+    if (reactorRuntime) {
+      const result = reactorRuntime.tick(state, stepNow);
+      for (const ex of result.completed) {
+        const t = EXPLORATION_TARGET_BY_ID[ex.targetId];
+        const rewardName = t ? `${getResourceName(t.reward.resourceId)} ×${t.reward.amount}` : '探索奖励';
+        toast(`探索完成：${t?.name ?? ex.targetId}，获得 ${rewardName}`);
+        void saveNow('探索完成');
+      }
+    }
   }
   if (now - lastAchievementCheck >= 1000) {
     lastAchievementCheck = now;
@@ -489,8 +547,10 @@ function frame(now: number): void {
   if (ev) handleSpawnedEvent(ev);
   hud.update(state);
   panel.update(state, selectedId, lastSummary);
+  if (reactorPanel && reactorRuntime) reactorPanel.update(state, reactorRuntime, Date.now());
   updateEventStatus();
   updateGuideCard();
+  updateReactorVisibility();
   scene.sync(buildSceneSync());
   requestAnimationFrame(frame);
 }
@@ -566,6 +626,44 @@ async function bootstrap(): Promise<void> {
     },
   });
 
+  // T1-2 同位素反应堆系统：ConsumptionEngine → ReactorRuntime → ReactorPanel
+  const stateBackend = new JsonStateBackend(repo);
+  const txRepo = new TransactionalRepository<GameState>(stateBackend, structuredClone);
+  const consumptionEngine = new ConsumptionEngine(txRepo);
+  reactorRuntime = new ReactorRuntime(consumptionEngine);
+  reactorPanel = new ReactorPanel({
+    onActivateBuff: async (defId) => {
+      const def = REACTOR_BUFF_BY_ID[defId];
+      const r = await reactorRuntime.activateBuff(state, defId, Date.now());
+      if (r.ok) {
+        toast(`${def?.name ?? 'buff'} 已激活`);
+        void saveNow('反应堆');
+      } else {
+        toast(r.reason ?? '激活失败', 'error');
+      }
+    },
+    onDispatch: async (targetId) => {
+      const target = EXPLORATION_TARGET_BY_ID[targetId];
+      const r = await reactorRuntime.dispatchExploration(state, targetId, Date.now());
+      if (r.ok) {
+        toast(`已派遣：${target?.name ?? targetId}`);
+        void saveNow('反应堆');
+      } else {
+        toast(r.reason ?? '派遣失败', 'error');
+      }
+    },
+    onExchange: async (recipeId) => {
+      const recipe = EXCHANGE_RECIPE_BY_ID[recipeId];
+      const r = await reactorRuntime.exchange(state, recipeId);
+      if (r.ok) {
+        toast(`${recipe?.name ?? '兑换'} 完成`);
+        void saveNow('反应堆');
+      } else {
+        toast(r.reason ?? '兑换失败', 'error');
+      }
+    },
+  });
+
   const isFreshGame = state.createdAt === state.lastSavedAt && !state.facilities.transport.unlocked && state.credits === 100;
   if (isFreshGame) {
     toast('提示：出售星尘矿可赚信用点，先解锁运输线（600），再建精炼厂（1000）；点击场景设施可查看详情');
@@ -599,6 +697,13 @@ async function bootstrap(): Promise<void> {
         openResearchModal();
       } else if (page === 'achievements') {
         openAchievementsModal();
+      } else if (page === 'reactor') {
+        if (!hasResearch(state, 'rareIsotopeMining')) {
+          toast('需先完成「稀有同位素开采」研究', 'error');
+          return;
+        }
+        const card = document.getElementById('reactor-card');
+        if (card && !card.hidden) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       } else if (page === 'help') {
         showHelpModal();
       }

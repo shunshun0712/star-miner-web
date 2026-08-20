@@ -1,5 +1,6 @@
 import { DEFAULT_CRYSTAL_KEEP, DEFAULT_STARDUST_KEEP, EVENT_FIRST_AFTER_MS, FACILITY_ORDER, SAVE_VERSION } from './config';
 import type { GameState } from './types';
+import { createEmptyConsumptionLog } from './consumptionLog';
 
 export function createNewGame(now: number): GameState {
   const facilities = {} as GameState['facilities'];
@@ -16,6 +17,7 @@ export function createNewGame(now: number): GameState {
     isotope: 0,
     antimatter: 0,
     darkmatter: 0,
+    consumptionLog: createEmptyConsumptionLog(),
     facilities,
     energyStrategy: 'balanced',
     eventState: {

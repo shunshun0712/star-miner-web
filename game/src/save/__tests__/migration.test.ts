@@ -5,6 +5,7 @@ import {
   migrateV3ToV4,
   migrateV4ToV5,
   migrateV5ToV6,
+  migrateV6ToV7,
   parseSaveJson,
   validateState,
 } from '../../core/save';
@@ -53,6 +54,10 @@ function v5Save(): Record<string, unknown> {
 
 function v6Save(): Record<string, unknown> {
   return migrateV5ToV6(v5Save());
+}
+
+function v7Save(): Record<string, unknown> {
+  return migrateV6ToV7(v6Save());
 }
 
 // ── 辅助：将 Record 断言为 v6 合法存档并走完整校验 ──
@@ -342,15 +347,15 @@ describe('迁移 v5 → v6', () => {
 // v1 → v6 全链
 // ════════════════════════════════════════════
 
-describe('全链迁移 v1 → v6', () => {
-  it('单步顺序迁移 v1→v2→v3→v4→v5→v6 等价于 parseSaveJson', () => {
-    const stepwise = migrateV5ToV6(migrateV4ToV5(migrateV3ToV4(migrateV2ToV3(migrateV1ToV2(v1Save())))));
+describe('全链迁移 v1 → v7', () => {
+  it('单步顺序迁移 v1→v2→v3→v4→v5→v6→v7 等价于 parseSaveJson', () => {
+    const stepwise = migrateV6ToV7(migrateV5ToV6(migrateV4ToV5(migrateV3ToV4(migrateV2ToV3(migrateV1ToV2(v1Save()))))));
     const viaParse = parseSaveJson(JSON.stringify(v1Save()));
     expect(viaParse.ok).toBe(true);
     if (!viaParse.ok) return;
     // 逐字段对比（parseSaveJson 内部会走 migrate + validate + 白名单过滤）
-    expect(stepwise.version).toBe(6);
-    expect(viaParse.state.version).toBe(6);
+    expect(stepwise.version).toBe(7);
+    expect(viaParse.state.version).toBe(7);
     expect(stepwise.credits).toBe(viaParse.state.credits);
     expect(stepwise.stardust).toBe(viaParse.state.stardust);
   });
@@ -376,7 +381,7 @@ describe('全链迁移 v1 → v6', () => {
     const r = parseToV6(v2Save());
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.state.version).toBe(6);
+    expect(r.state.version).toBe(7);
     expect(r.state.facilities.deuteriumExcavator).toBeDefined();
     expect(r.state.facilities.energyStation).toBeDefined();
   });
@@ -385,7 +390,7 @@ describe('全链迁移 v1 → v6', () => {
     const r = parseToV6(v3Save());
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.state.version).toBe(6);
+    expect(r.state.version).toBe(7);
     expect(r.state.settings.autoSellStardust).toBe(false);
   });
 
@@ -393,7 +398,7 @@ describe('全链迁移 v1 → v6', () => {
     const r = parseToV6(v4Save());
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.state.version).toBe(6);
+    expect(r.state.version).toBe(7);
     expect(r.state.settings.autoSellCrystal).toBe(false);
   });
 
@@ -401,7 +406,7 @@ describe('全链迁移 v1 → v6', () => {
     const r = parseToV6(v5Save());
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.state.version).toBe(6);
+    expect(r.state.version).toBe(7);
     expect(r.state.facilities.energyStation.unlocked).toBe(false);
   });
 
@@ -411,7 +416,7 @@ describe('全链迁移 v1 → v6', () => {
     expect(r.ok).toBe(true);
   });
 
-  it('各版本存档均能迁移到 v6 且通过校验', () => {
+  it('各版本存档均能迁移到 v7 且通过校验', () => {
     for (const [label, raw] of [
       ['v1', v1Save()],
       ['v2', v2Save()],
@@ -419,11 +424,12 @@ describe('全链迁移 v1 → v6', () => {
       ['v4', v4Save()],
       ['v5', v5Save()],
       ['v6', v6Save()],
+      ['v7', v7Save()],
     ] as const) {
       const r = parseToV6(raw);
       expect(r.ok, `${label} 迁移失败`).toBe(true);
       if (r.ok) {
-        expect(r.state.version, `${label} 版本不为 6`).toBe(6);
+        expect(r.state.version, `${label} 版本不为 7`).toBe(7);
       }
     }
   });

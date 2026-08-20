@@ -52,6 +52,10 @@
           <span class="nav-icon">◈</span>
           <span class="nav-text">矿站</span>
         </button>
+        <button class="nav-btn" data-page="reactor" title="同位素反应堆（消耗同位素）">
+          <span class="nav-icon">⚛</span>
+          <span class="nav-text">反应堆</span>
+        </button>
         <button class="nav-btn" data-page="starmap" title="星图（后续开放）">
           <span class="nav-icon">✧</span>
           <span class="nav-text">星图</span>
@@ -121,6 +125,12 @@
           </div>
           <p class="energy-effect" id="energy-effect"></p>
           <p class="hint">快捷键 1 / 2 / 3 切换</p>
+        </section>
+
+        <section class="panel-card" id="reactor-card" hidden>
+          <h2>同位素反应堆</h2>
+          <p class="hint" style="margin:-4px 0 8px">消耗同位素驱动 buff / 深空探索 / 碎片兑换</p>
+          <div id="reactor-body"></div>
         </section>
 
         <section class="panel-card guide-card" id="guide-card" hidden>
