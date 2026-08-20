@@ -23,9 +23,9 @@ export default defineConfig({
   build: {
     outDir: '../outputs/StarMinerWeb',
     emptyOutDir: true,
+    chunkSizeWarningLimit: 1000,
   },
   server: {
     port: 5173,
   },
 });
-
