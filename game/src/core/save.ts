@@ -19,6 +19,60 @@ export function serializeState(state: GameState): string {
   return JSON.stringify(state, null, 2);
 }
 
+/**
+ * T2-4: 分层导出序列化——把完整 GameState 拆成 main（基线层）+ prestige（转生层），
+ * 导出 JSON 含顶层 `version` + `main` + `prestige` 三个 key。
+ *
+ * 与 `serializeState`（扁平全态 JSON）的分工：
+ * - `serializeState`：扁平全态，供 layeredBackend / stateBackend / localStorage 快照等
+ *   **内部持久化**使用——这些消费者依赖"JSON.parse 后即扁平字段"的契约（测试里直接
+ *   `raw.settings`、`raw.version = 3` 改字段）。改其语义会连锁破坏 4 处内部消费者 + 25 个测试。
+ * - `serializeLayeredExport`：分层结构，供**文件导出/导入**用，镜像 IDB 双键持久化的分层语义。
+ *
+ * 最小改动原则：保留 serializeState 扁平语义不变，新增独立的分层导出函数，零回归。
+ */
+export function serializeLayeredExport(state: GameState): string {
+  const { prestige, ...main } = state;
+  return JSON.stringify({ version: SAVE_VERSION, main, prestige }, null, 2);
+}
+
+/**
+ * T2-4: 分层导出 JSON 解析——检测格式（分层 v8 vs 扁平旧版），统一走迁移链 + 校验。
+ *
+ * - **分层格式**（顶层同时含 `main`（对象）+ `prestige`（对象））：合并为扁平全态后走 validateState
+ * - **扁平格式**（v1~v8 单键）：直接走 validateState（含 migrate 链，v7 及以下自动补空 prestige 层）
+ *
+ * 两种格式都经 validateState 兜底——旧版导入缺失 prestige 时由 migrateV7ToV8 回填空层，不触发 corruption。
+ * 检测依据：扁平 v8 存档虽有顶层 `prestige`，但无顶层 `main`，故 `main` 是否为对象是分层的可靠判据。
+ */
+export function parseLayeredExport(json: string): ParseResult {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(json);
+  } catch {
+    return { ok: false, error: 'JSON 格式错误' };
+  }
+  if (typeof raw !== 'object' || raw === null) return { ok: false, error: '存档不是有效的对象' };
+  const obj = raw as Record<string, unknown>;
+
+  // 分层格式检测：顶层同时含 main（对象）+ prestige（对象）
+  if (typeof obj.main === 'object' && obj.main !== null && typeof obj.prestige === 'object' && obj.prestige !== null) {
+    const main = obj.main as Record<string, unknown>;
+    const prestige = obj.prestige as Record<string, unknown>;
+    // 合并为扁平全态：main 字段 + prestige + version（顶层优先，缺失则回退 main 自带版本）
+    const merged: Record<string, unknown> = { ...main, prestige };
+    if (typeof obj.version === 'number') {
+      merged.version = obj.version;
+    } else if (typeof main.version === 'number') {
+      merged.version = main.version;
+    }
+    return validateState(merged);
+  }
+
+  // 扁平格式（v1~v8 单键旧版存档）——走既有迁移链 + 校验
+  return validateState(obj);
+}
+
 function isFiniteNumber(v: unknown): v is number {
   return typeof v === 'number' && Number.isFinite(v);
 }

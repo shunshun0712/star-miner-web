@@ -1,8 +1,8 @@
-﻿import { parseSaveJson, serializeState } from '../core/save';
+﻿import { parseLayeredExport, serializeLayeredExport } from '../core/save';
 import type { GameState } from '../core/types';
 
 export function downloadSaveFile(state: GameState): void {
-  const blob = new Blob([serializeState(state)], { type: 'application/json' });
+  const blob = new Blob([serializeLayeredExport(state)], { type: 'application/json' });
   downloadBlob(blob, `星际矿站存档_${new Date().toISOString().slice(0, 10)}.json`);
 }
 
@@ -26,5 +26,7 @@ export async function importSaveFile(file: File) {
   } catch {
     return { ok: false as const, error: '读取文件失败' };
   }
-  return parseSaveJson(text);
+  // T2-4: 自动检测分层 v8（version + main + prestige）或扁平旧版（v1~v8 单键），
+  // 旧版缺失 prestige 时由 migrateV7ToV8 回填空层，不触发 corruption。
+  return parseLayeredExport(text);
 }
