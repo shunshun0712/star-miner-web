@@ -2590,6 +2590,7 @@ kbd {
   font-family: var(--font-mono);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
 .shop-buy-btn:hover:not(:disabled) {
