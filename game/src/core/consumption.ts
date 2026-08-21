@@ -77,6 +77,17 @@ export class ConsumptionEngine {
   private events: Map<string, ConsumptionEvent> = new Map();
   /** 已处理的幂等键集合——相同 key 的消耗请求不重复执行 */
   private processedKeys: Set<string> = new Set();
+  /**
+   * 串行化队列——将并发 consume/rollback 调用排队为顺序执行。
+   *
+   * TransactionalRepository 是单实例共享可变状态机（snapshot/workingState/done 均为实例字段），
+   * 两个 consume 在 await commit 处交错会导致第二个 begin() 的自动清理覆盖第一个事务的快照元数据，
+   * 引发扣减泄漏（Bug A）和幂等 check-then-act 竞态（Bug B）。
+   * 此队列在 engine 层将所有消耗调用串行化，从源头消除交错。
+   *
+   * 每次执行后用 `.catch(() => undefined)` 兜底——失败不断链，否则一次失败会永久卡死后续所有消耗。
+   */
+  private queue: Promise<unknown> = Promise.resolve();
 
   constructor(private readonly repo: TransactionalRepository<GameState>) {}
 
@@ -89,6 +100,18 @@ export class ConsumptionEngine {
    * @returns 消耗结果——ok=true 时 event 字段包含事件记录（可用于后续回滚）
    */
   async consume(state: GameState, request: ConsumptionRequest): Promise<ConsumptionResult> {
+    // 串行化：将并发调用排队为顺序执行，避免事务层交错。
+    // catch 不断链——doConsume 自身不会抛（内部已 catch），但队列前驱若被
+    // 外部 reject（理论上不会发生），这里兜底确保后续调用不被卡死。
+    const run = this.queue.then(() => this.doConsume(state, request));
+    this.queue = run.catch(() => undefined);
+    return run;
+  }
+
+  /**
+   * consume 的实际实现——已由外层 consume() 串行化保护，无需考虑并发。
+   */
+  private async doConsume(state: GameState, request: ConsumptionRequest): Promise<ConsumptionResult> {
     // 幂等检查：相同 idempotencyKey 的消耗只执行一次
     if (request.idempotencyKey && this.processedKeys.has(request.idempotencyKey)) {
       const existing = this.findEventByIdempotencyKey(request.idempotencyKey);
@@ -167,6 +190,16 @@ export class ConsumptionEngine {
    * @param eventId 要回滚的事件 ID（从 consume 返回结果的 event.id 获取）
    */
   async rollback(state: GameState, eventId: string): Promise<ConsumptionResult> {
+    // 串行化：与 consume 共享同一队列，避免 rollback 与 consume 交错。
+    const run = this.queue.then(() => this.doRollback(state, eventId));
+    this.queue = run.catch(() => undefined);
+    return run;
+  }
+
+  /**
+   * rollback 的实际实现——已由外层 rollback() 串行化保护。
+   */
+  private async doRollback(state: GameState, eventId: string): Promise<ConsumptionResult> {
     const event = this.events.get(eventId);
     if (!event) {
       return { ok: false, reason: `消耗事件 ${eventId} 不存在` };
@@ -233,6 +266,8 @@ export class ConsumptionEngine {
     this.events.clear();
     this.processedKeys.clear();
     eventCounter = 0;
+    // 重置串行化队列，避免跨测试用例的前驱 promise 残留
+    this.queue = Promise.resolve();
   }
 
   private findEventByIdempotencyKey(key: string): ConsumptionEvent | undefined {
