@@ -190,6 +190,21 @@ export function migrateV7ToV8(raw: Record<string, unknown>): Record<string, unkn
   };
 }
 
+export function migrateV8ToV9(raw: Record<string, unknown>): Record<string, unknown> {
+  // T3-1: v8 转生层无 shopPurchases 字段，回填空对象。
+  // prestige 可能已被 migrateV7ToV8 回填为空层（含 unlocked/stardust/prestigeLevel/history），
+  // 也可能是 v8 玩家的真实存档（有数据），只需补 shopPurchases: {}。
+  const prestige = (raw.prestige as Record<string, unknown> | undefined) ?? {};
+  return {
+    ...raw,
+    version: 9,
+    prestige: {
+      ...prestige,
+      shopPurchases: {},
+    },
+  };
+}
+
 function migrate(raw: Record<string, unknown>): unknown {
   let s: Record<string, unknown> = { ...raw };
   if (s.version === 1) s = migrateV1ToV2(s);
@@ -199,6 +214,7 @@ function migrate(raw: Record<string, unknown>): unknown {
   if (s.version === 5) s = migrateV5ToV6(s);
   if (s.version === 6) s = migrateV6ToV7(s);
   if (s.version === 7) s = migrateV7ToV8(s);
+  if (s.version === 8) s = migrateV8ToV9(s);
   return s;
 }
 
@@ -297,6 +313,15 @@ export function validatePrestigeLayer(rawIn: unknown): string | null {
     }
     if (!isFiniteNumber(s.achievementCount) || (s.achievementCount as number) < 0) return '转生层历史快照 achievementCount 非法';
     if (!isFiniteNumber(s.researchCount) || (s.researchCount as number) < 0) return '转生层历史快照 researchCount 非法';
+  }
+  // T3-1: 校验 shopPurchases——itemId → 购买等级，值须为非负整数
+  // 不做白名单过滤（与 unlocked 不同）：T3-2 会扩充物品注册表，未知 itemId 前向保留
+  const sp = p.shopPurchases;
+  if (typeof sp !== 'object' || sp === null) return '转生层商店购买记录非法';
+  for (const v of Object.values(sp as Record<string, unknown>)) {
+    if (!isFiniteNumber(v) || !Number.isInteger(v) || (v as number) < 0) {
+      return '转生层商店购买等级非法';
+    }
   }
   return null;
 }

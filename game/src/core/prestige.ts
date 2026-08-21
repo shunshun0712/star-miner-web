@@ -178,6 +178,8 @@ export function planPrestigeReset(current: GameState, now: number): PrestigeRese
         stardustEarned: earned,
       } satisfies PrestigeHistoryEntry,
     ],
+    // T3-1: 商店购买等级跨转生保留（转生不清空购物记录）
+    shopPurchases: { ...current.prestige.shopPurchases },
   };
   const rebuiltState = buildPrestigeBaseline(now, newPrestige);
   return { stardustEarned: earned, preSnapshot, dirtyFields, newPrestige, rebuiltState };

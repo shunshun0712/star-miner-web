@@ -7,6 +7,7 @@ import {
   migrateV5ToV6,
   migrateV6ToV7,
   migrateV7ToV8,
+  migrateV8ToV9,
   parseSaveJson,
   validateState,
 } from '../../core/save';
@@ -63,6 +64,10 @@ function v7Save(): Record<string, unknown> {
 
 function v8Save(): Record<string, unknown> {
   return migrateV7ToV8(v7Save());
+}
+
+function v9Save(): Record<string, unknown> {
+  return migrateV8ToV9(v8Save());
 }
 
 // ── 辅助：将 Record 断言为 v6 合法存档并走完整校验 ──
@@ -382,15 +387,54 @@ describe('迁移 v7 → v8', () => {
   });
 });
 
-describe('全链迁移 v1 → v8', () => {
-  it('单步顺序迁移 v1→v2→v3→v4→v5→v6→v7→v8 等价于 parseSaveJson', () => {
-    const stepwise = migrateV7ToV8(migrateV6ToV7(migrateV5ToV6(migrateV4ToV5(migrateV3ToV4(migrateV2ToV3(migrateV1ToV2(v1Save())))))));
+describe('迁移 v8 → v9', () => {
+  it('版本号升级到 9', () => {
+    const r = migrateV8ToV9(v8Save());
+    expect(r.version).toBe(9);
+  });
+
+  it('补空 shopPurchases 对象', () => {
+    const r = migrateV8ToV9(v8Save());
+    const p = r.prestige as Record<string, unknown>;
+    expect(p.shopPurchases).toEqual({});
+  });
+
+  it('保留 v8 已有 prestige 字段（unlocked/stardust/prestigeLevel/history）', () => {
+    const raw = v8Save();
+    const prestige = raw.prestige as Record<string, unknown>;
+    prestige.stardust = 42;
+    prestige.prestigeLevel = 3;
+    prestige.unlocked = ['prestige-start-credits'];
+    const r = migrateV8ToV9(raw);
+    const p = r.prestige as Record<string, unknown>;
+    expect(p.stardust).toBe(42);
+    expect(p.prestigeLevel).toBe(3);
+    expect(p.unlocked).toEqual(['prestige-start-credits']);
+  });
+
+  it('v8 存档经迁移后通过 validateState', () => {
+    const r = parseSaveJson(JSON.stringify(v8Save()));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.state.version).toBe(SAVE_VERSION);
+    expect(r.state.prestige.shopPurchases).toEqual({});
+  });
+
+  it('v8 存档已含 consumptionLog 不被破坏', () => {
+    const r = migrateV8ToV9(v8Save());
+    expect((r as Record<string, unknown>).consumptionLog).toBeDefined();
+  });
+});
+
+describe('全链迁移 v1 → v9', () => {
+  it('单步顺序迁移 v1→v2→v3→v4→v5→v6→v7→v8→v9 等价于 parseSaveJson', () => {
+    const stepwise = migrateV8ToV9(migrateV7ToV8(migrateV6ToV7(migrateV5ToV6(migrateV4ToV5(migrateV3ToV4(migrateV2ToV3(migrateV1ToV2(v1Save()))))))));
     const viaParse = parseSaveJson(JSON.stringify(v1Save()));
     expect(viaParse.ok).toBe(true);
     if (!viaParse.ok) return;
     // 逐字段对比（parseSaveJson 内部会走 migrate + validate + 白名单过滤）
-    expect(stepwise.version).toBe(8);
-    expect(viaParse.state.version).toBe(8);
+    expect(stepwise.version).toBe(9);
+    expect(viaParse.state.version).toBe(SAVE_VERSION);
     expect(stepwise.credits).toBe(viaParse.state.credits);
     expect(stepwise.stardust).toBe(viaParse.state.stardust);
   });
@@ -411,6 +455,7 @@ describe('全链迁移 v1 → v8', () => {
     expect(r.state.settings.autoSellStardust).toBe(false);
     expect(r.state.settings.crystalKeepAmount).toBe(DEFAULT_CRYSTAL_KEEP);
     expect(r.state.prestige.prestigeLevel).toBe(0);
+    expect(r.state.prestige.shopPurchases).toEqual({});
   });
 
   it('v2 存档经全链迁移后通过 validateState', () => {
@@ -452,7 +497,7 @@ describe('全链迁移 v1 → v8', () => {
     expect(r.ok).toBe(true);
   });
 
-  it('各版本存档均能迁移到 v8 且通过校验', () => {
+  it('各版本存档均能迁移到 v9 且通过校验', () => {
     for (const [label, raw] of [
       ['v1', v1Save()],
       ['v2', v2Save()],
@@ -462,11 +507,12 @@ describe('全链迁移 v1 → v8', () => {
       ['v6', v6Save()],
       ['v7', v7Save()],
       ['v8', v8Save()],
+      ['v9', v9Save()],
     ] as const) {
       const r = parseToV6(raw);
       expect(r.ok, `${label} 迁移失败`).toBe(true);
       if (r.ok) {
-        expect(r.state.version, `${label} 版本不为 8`).toBe(8);
+        expect(r.state.version, `${label} 版本不为 ${SAVE_VERSION}`).toBe(SAVE_VERSION);
       }
     }
   });

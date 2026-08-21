@@ -204,6 +204,7 @@ describe('T2-4 JSON 导出升级', () => {
         stardust: 13,
         prestigeLevel: 2,
         history: [],
+        shopPurchases: {},
       };
       const before = buildPrestigeBaseline(T0, prestige);
       // 断言永久加成已生效（非裸初始态）：credits=600（100+500）、he3 解锁

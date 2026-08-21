@@ -50,9 +50,10 @@ export interface LifetimeStats {
 export interface GameState {
   /**
    * T2-1: 存档版本升至 8——引入转生层（prestige）。
+   * T3-1: 存档版本升至 9——转生层新增 shopPurchases（星核商店购买等级表）。
    * 基线层（除 prestige 外的全部字段）随转生重置；转生层独立持久化、跨转生保留。
    */
-  version: 8;
+  version: 9;
   credits: number;
   stardust: number;
   refineryBuffer: number;
@@ -102,6 +103,13 @@ export interface PrestigeLayer {
   prestigeLevel: number;
   /** 转生历史快照（按时间顺序，最近的在末尾） */
   history: PrestigeHistoryEntry[];
+  /**
+   * T3-1: 星核商店购买等级表——itemId → 已购买等级（0 级 = 未购买）。
+   *
+   * 支持可重复购买物品（成本递增）：每购买一次 level +1，下一级成本按
+   * baseCost × costMultiplier^level 计算。跨转生持久化（转生不清空购物记录）。
+   */
+  shopPurchases: Record<string, number>;
 }
 
 /** 转生历史快照条目——记录单次转生时刻的基线层摘要 */

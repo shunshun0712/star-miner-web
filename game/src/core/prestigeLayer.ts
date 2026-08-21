@@ -18,6 +18,7 @@ export function createEmptyPrestigeLayer(): PrestigeLayer {
     stardust: 0,
     prestigeLevel: 0,
     history: [],
+    shopPurchases: {},
   };
 }
 

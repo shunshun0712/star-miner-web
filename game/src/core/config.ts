@@ -8,7 +8,7 @@ import type {
 } from './types';
 
 export const GAME_VERSION = 'v0.5';
-export const SAVE_VERSION = 8;
+export const SAVE_VERSION = 9;
 export const MAX_LEVEL = 5;
 export const OFFLINE_CAP_MS = 8 * 3600 * 1000;
 export const CRYSTAL_RECIPE_STARDUST = 4;

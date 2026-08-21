@@ -25,7 +25,7 @@ function v1SaveJson(): string {
 }
 
 describe('存档校验', () => {
-  it('序列化与解析往返一致（v8）', () => {
+  it('序列化与解析往返一致（v9）', () => {
     const s = createNewGame(T0);
     const parsed = parseSaveJson(serializeState(s));
     expect(parsed.ok).toBe(true);
@@ -47,7 +47,7 @@ describe('存档校验', () => {
     expect(parsed.state.settings.crystalKeepAmount).toBe(10);
   });
 
-  it('v1 存档迁移到 v8：补齐设施、事件状态、设置与 v0.4 字段', () => {
+  it('v1 存档迁移到 v9：补齐设施、事件状态、设置与 v0.4 字段', () => {
     const r = parseSaveJson(v1SaveJson());
     expect(r.ok).toBe(true);
     if (!r.ok) return;
@@ -68,7 +68,7 @@ describe('存档校验', () => {
     expect(r.state.energyStrategy).toBe('excavation');
   });
 
-  it('v3 存档迁移到 v8：补充默认设置与 v0.4 字段', () => {
+  it('v3 存档迁移到 v9：补充默认设置与 v0.4 字段', () => {
     const raw = JSON.parse(serializeState(createNewGame(T0))) as Record<string, unknown>;
     raw.version = 3;
     delete raw.settings;
@@ -83,7 +83,7 @@ describe('存档校验', () => {
     expect(r.state.facilities.energyStation.unlocked).toBe(false);
   });
 
-  it('v4 存档迁移到 v8：保留旧设置并补默认值', () => {
+  it('v4 存档迁移到 v9：保留旧设置并补默认值', () => {
     const raw = JSON.parse(serializeState(createNewGame(T0))) as Record<string, unknown>;
     const settings = raw.settings as Record<string, unknown>;
     settings.autoSellStardust = true;
@@ -101,7 +101,7 @@ describe('存档校验', () => {
     expect(r.state.settings.crystalKeepAmount).toBe(10);
   });
 
-  it('v5 存档迁移到 v8：补能源站与 v0.4 字段', () => {
+  it('v5 存档迁移到 v9：补能源站与 v0.4 字段', () => {
     const raw = JSON.parse(serializeState(createNewGame(T0))) as Record<string, unknown>;
     raw.version = 5;
     delete (raw.facilities as Record<string, unknown>).energyStation;
@@ -194,7 +194,7 @@ describe('存档校验', () => {
     expect(r.ok).toBe(false);
   });
 
-  // ── T2-1: 转生层（v8）校验 ──
+  // ── T2-1: 转生层（v9）校验 ──
 
   it('缺少转生层拒绝', () => {
     const raw = JSON.parse(serializeState(createNewGame(T0))) as Record<string, unknown>;
@@ -224,6 +224,53 @@ describe('存档校验', () => {
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.state.prestige.unlocked).toEqual(['prestige-start-credits']);
+  });
+
+  // ── T3-1: shopPurchases（v9）校验 ──
+
+  it('缺少 shopPurchases 拒绝', () => {
+    const raw = JSON.parse(serializeState(createNewGame(T0))) as Record<string, unknown>;
+    delete (raw.prestige as Record<string, unknown>).shopPurchases;
+    const r = parseSaveJson(JSON.stringify(raw));
+    expect(r.ok).toBe(false);
+  });
+
+  it('shopPurchases 非对象拒绝', () => {
+    const raw = JSON.parse(serializeState(createNewGame(T0))) as Record<string, unknown>;
+    (raw.prestige as Record<string, unknown>).shopPurchases = 'not-an-object';
+    const r = parseSaveJson(JSON.stringify(raw));
+    expect(r.ok).toBe(false);
+  });
+
+  it('shopPurchases 购买等级为负拒绝', () => {
+    const s = createNewGame(T0);
+    s.prestige.shopPurchases['shop-credit-injection'] = -1;
+    expect(parseSaveJson(serializeState(s)).ok).toBe(false);
+  });
+
+  it('shopPurchases 购买等级为非整数拒绝', () => {
+    const s = createNewGame(T0);
+    s.prestige.shopPurchases['shop-credit-injection'] = 1.5;
+    expect(parseSaveJson(serializeState(s)).ok).toBe(false);
+  });
+
+  it('shopPurchases 合法值通过校验', () => {
+    const s = createNewGame(T0);
+    s.prestige.shopPurchases['shop-credit-injection'] = 3;
+    s.prestige.shopPurchases['shop-research-subsidy'] = 1;
+    const r = parseSaveJson(serializeState(s));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.state.prestige.shopPurchases['shop-credit-injection']).toBe(3);
+  });
+
+  it('shopPurchases 未知 itemId 前向保留（不做白名单过滤）', () => {
+    const s = createNewGame(T0);
+    s.prestige.shopPurchases['future-item-t3-2'] = 5;
+    const r = parseSaveJson(serializeState(s));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.state.prestige.shopPurchases['future-item-t3-2']).toBe(5);
   });
 });
 

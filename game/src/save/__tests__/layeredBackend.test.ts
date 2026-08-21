@@ -131,7 +131,7 @@ describe('LayeredStateBackend — 两层数据隔离（验收 #1）', () => {
     const backend = new LayeredStateBackend(store);
     const loaded = await backend.load();
     expect(loaded).not.toBeNull();
-    expect(loaded!.version).toBe(8); // 迁移链把 v7 升到 v8
+    expect(loaded!.version).toBe(9); // 迁移链把 v7 升到 v9
     expect(loaded!.prestige.prestigeLevel).toBe(0);
     expect(loaded!.prestige.unlocked).toEqual([]);
   });
