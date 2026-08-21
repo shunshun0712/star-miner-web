@@ -12,6 +12,7 @@ import {
 import type { EventKind, EventState, GameState, LifetimeStats, PrestigeLayer } from './types';
 import { createEmptyConsumptionLog } from './consumptionLog';
 import { createEmptyPrestigeLayer, isRegisteredPrestigeUnlock } from './prestigeLayer';
+import { effectiveMaxLevel } from './shopBonuses';
 
 export type ParseResult = { ok: true; state: GameState } | { ok: false; error: string };
 
@@ -361,13 +362,15 @@ export function validateState(rawIn: unknown): ParseResult {
     return { ok: false, error: '存档缺少设施数据' };
   }
   const facilities = s.facilities as Record<string, unknown>;
+  // T3-2: 有效等级上限 = MAX_LEVEL + shop-level-cap（此时 prestige.shopPurchases 已校验完成）
+  const maxLvl = effectiveMaxLevel(s as unknown as GameState);
   for (const id of FACILITY_ORDER) {
     const f = facilities[id];
     if (typeof f !== 'object' || f === null) {
       return { ok: false, error: `缺少设施 ${id}` };
     }
     const ff = f as Record<string, unknown>;
-    if (!isFiniteNumber(ff.level) || (ff.level as number) < 1 || (ff.level as number) > MAX_LEVEL) {
+    if (!isFiniteNumber(ff.level) || (ff.level as number) < 1 || (ff.level as number) > maxLvl) {
       return { ok: false, error: `设施 ${id} 等级越界` };
     }
     if (typeof ff.unlocked !== 'boolean') {

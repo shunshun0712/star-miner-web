@@ -24,6 +24,7 @@ import { achievementProductionMultiplier } from './achievements';
 import { energyConsumptionPerSecond, releaseActive } from './energy';
 import { activeModifier } from './events';
 import { hasResearch } from './research';
+import { shopFacilityRateMultiplier, shopOreProductionMultiplier, shopIsotopeProductionMultiplier } from './shopBonuses';
 import type { FacilityId, GameState, ProductionRates, ProductionSummary } from './types';
 
 const MINING_IDS: FacilityId[] = ['excavator', 'he3Excavator', 'deuteriumExcavator'];
@@ -69,6 +70,9 @@ export function rawRate(
   if (hasResearch(state, 'solarPanels') && state.energyStrategy === 'balanced') m *= SOLAR_BALANCED_MULT;
   if (releaseActive(state, now)) m *= ENERGY_RELEASE_MULT;
   m *= achievementProductionMultiplier(state);
+  // T3-2: 星核商店持续乘子——全局设施速率（shop-overdrive）+ 采掘类矿石产量（shop-ore-booster）
+  m *= shopFacilityRateMultiplier(state);
+  if (isMining(id)) m *= shopOreProductionMultiplier(state);
   return cfg.baseSpeed * mult * (1 + SPEED_GROWTH_PER_LEVEL * (level - 1)) * activeModifier(state, id, now) * m;
 }
 
@@ -182,7 +186,8 @@ export function tickProduction(
   let isotopeProduced = 0;
   if (hasResearch(state, 'rareIsotopeMining')) {
     // 同位素产量同样受能源不足惩罚（M1）：按有效上游采掘速率计算，而非原始速率。
-    isotopeProduced = eff(rates.excavator + rates.he3Excavator + rates.deuteriumExcavator) * dt * ISOTOPE_CHANCE;
+    // T3-2: shop-isotope-enrichment 每级 +25% 同位素产量（派生乘子）
+    isotopeProduced = eff(rates.excavator + rates.he3Excavator + rates.deuteriumExcavator) * dt * ISOTOPE_CHANCE * shopIsotopeProductionMultiplier(state);
     state.isotope = Math.max(0, state.isotope + isotopeProduced);
     state.stats.totalIsotopeProduced += isotopeProduced;
   }

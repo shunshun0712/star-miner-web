@@ -22,6 +22,7 @@ import type {
 } from './types';
 import { createInitialBaseline } from './state';
 import { PRESTIGE_UNLOCKS } from './prestigeLayer';
+import { applyShopBonuses, shopPrestigeGainMultiplier } from './shopBonuses';
 import type { TransactionalRepository } from '../save/transactional';
 
 // ════════════════════════════════════════════
@@ -75,7 +76,9 @@ export function computeStardustEarned(state: GameState): number {
     points += Math.max(0, f.level - 1) * STARDUST_PER_FACILITY_LEVEL;
   }
   points += state.research.length * STARDUST_PER_RESEARCH;
-  return Math.floor(points);
+  // T3-2: shop-prestige-amplifier 每级 +25% 转生收益（乘在 floor 之前）
+  // 红线：prestigeCeremony.computeStardustBreakdown 必须同步应用此乘子
+  return Math.floor(points * shopPrestigeGainMultiplier(state));
 }
 
 // ════════════════════════════════════════════
@@ -147,6 +150,9 @@ export function buildPrestigeBaseline(now: number, prestige: PrestigeLayer): Gam
     const schema = PRESTIGE_UNLOCKS[id];
     if (schema) schema.apply(state);
   }
+  // T3-2: 叠加商店 onBaseline 效果（excavator-tuning/he3-permit/stardust-resonance/starting-fund/deuterium-permit）
+  // 在 PRESTIGE_UNLOCKS 之后调用——商店效果可在 prestige 永久解锁之上进一步加成
+  applyShopBonuses(state);
   return state;
 }
 

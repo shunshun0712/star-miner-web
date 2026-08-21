@@ -11,6 +11,7 @@ import {
   UPGRADE_COST_GROWTH,
 } from './config';
 import { hasResearch } from './research';
+import { shopCreditsIncomeMultiplier, effectiveMaxLevel } from './shopBonuses';
 import type { FacilityId, GameState, ResourceId } from './types';
 
 export function crystalPrice(state: GameState): number {
@@ -40,7 +41,8 @@ export function crystalUpgradeCost(state: GameState, id: FacilityId): number {
 export function canUpgrade(state: GameState, id: FacilityId): ActionResult {
   const f = state.facilities[id];
   if (!f.unlocked) return { ok: false, reason: '设施未解锁' };
-  if (f.level >= MAX_LEVEL) return { ok: false, reason: '已达最高等级' };
+  // T3-2: 有效等级上限 = MAX_LEVEL + shop-level-cap 等级（未购买时等同裸上限 5）
+  if (f.level >= effectiveMaxLevel(state)) return { ok: false, reason: '已达最高等级' };
   const cost = upgradeCost(state, id);
   if (state.credits < cost) return { ok: false, reason: `信用点不足（需 ${cost}）` };
   const crystal = crystalUpgradeCost(state, id);
@@ -91,12 +93,14 @@ export function unlockFacility(state: GameState, id: FacilityId): ActionResult {
 }
 
 export function sellResource(state: GameState, resource: ResourceId, amount?: number): number {
+  // T3-2: shop-credit-amplifier 每级 +15% 出售收益（派生乘子）
+  const creditsMult = shopCreditsIncomeMultiplier(state);
   if (resource === 'stardust') {
     const held = state.stardust;
     if (held <= 0) return 0;
     const qty = amount === undefined ? held : Math.max(0, Math.min(Math.floor(amount), held));
     if (qty <= 0) return 0;
-    const gained = qty * STARDUST_PRICE;
+    const gained = Math.floor(qty * STARDUST_PRICE * creditsMult);
     state.credits += gained;
     state.stardust -= qty;
     state.stats.totalCreditsEarned += gained;
@@ -107,7 +111,7 @@ export function sellResource(state: GameState, resource: ResourceId, amount?: nu
     if (held <= 0) return 0;
     const qty = amount === undefined ? held : Math.max(0, Math.min(Math.floor(amount), held));
     if (qty <= 0) return 0;
-    const gained = qty * crystalPrice(state);
+    const gained = Math.floor(qty * crystalPrice(state) * creditsMult);
     state.credits += gained;
     state.crystal -= qty;
     state.stats.totalCreditsEarned += gained;

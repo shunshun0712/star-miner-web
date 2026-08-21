@@ -1603,3 +1603,201 @@ button {
 .nav-btn[data-page="prestige"] .nav-icon {
   color: var(--purple);
 }
+
+
+/* T3-3: 星核商店导航按钮 */
+.nav-btn[data-page="shop"] .nav-icon {
+  color: var(--gold);
+}
+
+/* T3-3: 星核商店面板 */
+.shop-modal {
+  width: min(640px, 94vw);
+}
+
+.shop-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.shop-header h2 {
+  margin: 0;
+  flex: 1;
+}
+
+.shop-balance {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.2;
+}
+
+.shop-balance-label {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.shop-balance-val {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--gold);
+}
+
+.shop-close {
+  font-size: 20px;
+  line-height: 1;
+  padding: 2px 10px;
+}
+
+.shop-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 8px;
+}
+
+.shop-tab {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  padding: 6px 12px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.shop-tab:hover {
+  border-color: var(--cyan);
+  color: var(--text);
+}
+
+.shop-tab.active {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  background: rgba(0, 200, 255, 0.08);
+}
+
+.shop-tab-count {
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.shop-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 24px;
+}
+
+.shop-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.shop-card.purchased {
+  border-color: rgba(0, 200, 255, 0.35);
+}
+
+.shop-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.shop-card-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.shop-cat-tag {
+  font-size: 10px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  padding: 1px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.shop-card-level {
+  font-size: 12px;
+  color: var(--cyan);
+}
+
+.shop-level {
+  font-variant-numeric: tabular-nums;
+}
+
+.shop-card-desc {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.5;
+  opacity: 0.85;
+}
+
+.shop-prereq {
+  font-size: 11px;
+  color: var(--warn);
+  line-height: 1.4;
+}
+
+.shop-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.shop-cost {
+  font-size: 12px;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.shop-cost.maxed {
+  color: var(--muted);
+}
+
+.shop-buy {
+  font-size: 12px;
+  padding: 5px 12px;
+  white-space: nowrap;
+}
+
+.shop-buy-locked,
+.shop-buy-maxed,
+.shop-buy-insufficient {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.shop-card.state-locked .shop-buy-locked,
+.shop-card.state-insufficient .shop-buy-insufficient {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+.shop-card.state-maxed .shop-buy-maxed {
+  color: var(--muted);
+}

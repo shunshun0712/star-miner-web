@@ -41,6 +41,8 @@ import { Hud } from './ui/hud';
 import { Panel } from './ui/panel';
 import { ReactorPanel } from './ui/reactorPanel';
 import { showPrestigeCeremony } from './ui/prestigeCeremony';
+import { showStarcoreShop, type StarcoreShopPanel } from './ui/starcoreShopPanel';
+import { SHOP_ITEMS, purchaseItem } from './core/starcoreShop';
 import { applyPanelTexture } from './ui/panelTexture';
 import {
   showAchievementsModal,
@@ -465,6 +467,32 @@ function openStarmap(): void {
   showStarmapModal(state);
 }
 
+/**
+ * T3-3: 打开/关闭星核商店面板（导航按钮切换）。
+ *
+ * 购买走 T3-1 的 purchaseItem 事务（txRepo），成功后面板原地刷新（state 引用不变）。
+ * toast 反馈成功/失败/星核不足。面板动态读取 SHOP_ITEMS 注册表，T3-2 扩充后自动适配。
+ */
+let shopPanel: StarcoreShopPanel | null = null;
+function openStarcoreShop(): void {
+  if (shopPanel?.isOpen()) {
+    shopPanel.close();
+    return;
+  }
+  shopPanel = showStarcoreShop(state, {
+    onPurchase: async (itemId) => {
+      const item = SHOP_ITEMS[itemId];
+      const r = await purchaseItem(txRepo, state, itemId);
+      if (r.ok) {
+        toast(`购买成功：${item?.name ?? itemId} → Lv.${r.newLevel}（消耗 ${r.cost} 星核）`);
+        void saveNow('商店');
+      } else {
+        toast(r.error ?? '购买失败', 'error');
+      }
+    },
+  });
+}
+
 function openSaveModal(): void {
   showSaveModal(
     { createdAt: state.createdAt, lastSavedAt: state.lastSavedAt },
@@ -743,6 +771,8 @@ async function bootstrap(): Promise<void> {
         openAchievementsModal();
       } else if (page === 'prestige') {
         openPrestigeCeremony();
+      } else if (page === 'shop') {
+        openStarcoreShop();
       } else if (page === 'reactor') {
         if (!hasResearch(state, 'rareIsotopeMining')) {
           toast('需先完成「稀有同位素开采」研究', 'error');

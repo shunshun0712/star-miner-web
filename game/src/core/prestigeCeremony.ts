@@ -17,6 +17,7 @@ import {
   computeStardustEarned,
 } from './prestige';
 import { PRESTIGE_UNLOCKS } from './prestigeLayer';
+import { shopPrestigeGainMultiplier } from './shopBonuses';
 import type { FacilityId, GameState } from './types';
 
 /** 单项星核贡献（资源 / 设施 / 研究通用结构） */
@@ -43,6 +44,8 @@ export interface StardustBreakdown {
   research: { count: number; rate: number; points: number };
   /** floor 前的总点数（浮点） */
   totalPoints: number;
+  /** T3-2: shop-prestige-amplifier 转生收益乘子（1.0 = 无加成） */
+  shopGainMultiplier: number;
   /** floor 后的星核（与 computeStardustEarned 一致） */
   stardustEarned: number;
 }
@@ -90,12 +93,16 @@ export function computeStardustBreakdown(state: GameState): StardustBreakdown {
   const totalPoints =
     resourceItems.reduce((s, i) => s + i.points, 0) + facilityPoints + researchPoints;
 
+  // T3-2: 同步 shop-prestige-amplifier 转生收益乘子，保持 stardustEarned === computeStardustEarned
+  const shopGainMultiplier = shopPrestigeGainMultiplier(state);
+
   return {
     resourceItems,
     facility: { totalLevelsAboveOne, rate: STARDUST_PER_FACILITY_LEVEL, points: facilityPoints },
     research: { count: researchCount, rate: STARDUST_PER_RESEARCH, points: researchPoints },
     totalPoints,
-    stardustEarned: Math.floor(totalPoints),
+    shopGainMultiplier,
+    stardustEarned: Math.floor(totalPoints * shopGainMultiplier),
   };
 }
 

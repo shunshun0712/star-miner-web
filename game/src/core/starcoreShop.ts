@@ -73,12 +73,17 @@ export interface ShopItemSchema {
 // ════════════════════════════════════════════
 
 /**
- * 商店物品注册表。
+ * 商店物品注册表——15 个物品覆盖 5 大类别。
  *
- * T3-1 先放 5 个占位物品（覆盖全部 5 类），数值为示意性可用值。
- * T3-2 会扩充到 ~12-15 个物品并接入 production/research/economy/prestige 集成钩子。
+ * T3-2 从 T3-1 的 5 个占位扩充到 15 个完整物品，保留全部 5 个原有 ID（数值/回调不变）。
+ * 持续型乘子效果（矿石产量、信用点收入、研究成本折扣等）不在 onPurchase/onBaseline 中，
+ * 而是由 shopBonuses.ts 的派生乘子函数读取 shopPurchases 计算——遵循 achievementProductionMultiplier 先例。
  */
 export const SHOP_ITEMS: Record<string, ShopItemSchema> = {
+  // ════════════════════════════════════════════
+  // economy（经济）— 3 项
+  // ════════════════════════════════════════════
+
   /** 经济类：立即获得信用点（购买即生效，测试用） */
   'shop-credit-injection': {
     id: 'shop-credit-injection',
@@ -94,20 +99,92 @@ export const SHOP_ITEMS: Record<string, ShopItemSchema> = {
     },
   },
 
+  /** 经济类：信用点收入乘子——每级 +15%（派生乘子，shopBonuses.ts 读取） */
+  'shop-credit-amplifier': {
+    id: 'shop-credit-amplifier',
+    name: '信用放大器',
+    description: '出售资源获得的信用点每级 +15%（持续生效）',
+    category: 'economy',
+    baseCost: 6,
+    costMultiplier: 1.6,
+    maxLevel: 3,
+    prerequisites: [{ itemId: 'shop-credit-injection', level: 1 }],
+  },
+
+  /** 经济类：转生后初始信用点——每级 +300（onBaseline 叠加） */
+  'shop-starting-fund': {
+    id: 'shop-starting-fund',
+    name: '启动资金',
+    description: '每次转生后初始信用点 +300×等级（叠加在裸基线 100 之上）',
+    category: 'economy',
+    baseCost: 8,
+    costMultiplier: 1.7,
+    maxLevel: 3,
+    prerequisites: [{ itemId: 'shop-credit-injection', level: 1 }],
+    onBaseline(state: GameState, level: number): void {
+      state.credits += 300 * level;
+    },
+  },
+
+  // ════════════════════════════════════════════
+  // production（生产）— 4 项
+  // ════════════════════════════════════════════
+
   /** 生产类：转生后采掘器等级提升 */
   'shop-excavator-tuning': {
     id: 'shop-excavator-tuning',
     name: '采掘器调校',
-    description: '每次转生后采掘器额外 +1 级（每级叠加）',
+    description: '每次转生后采掘器额外 +1 级（每级叠加，上限受 effectiveMaxLevel 约束）',
     category: 'production',
     baseCost: 5,
     costMultiplier: 1.5,
     maxLevel: 3,
     prerequisites: [{ itemId: 'shop-credit-injection', level: 1 }],
     onBaseline(state: GameState, level: number): void {
+      // 上限沿用裸 MAX_LEVEL=5（不与 shop-level-cap 叠加，防转生后初始等级即超限）
       state.facilities.excavator.level = Math.min(5, state.facilities.excavator.level + level);
     },
   },
+
+  /** 生产类：矿石产量乘子——每级 +20%（派生乘子，作用于采掘类 rawRate） */
+  'shop-ore-booster': {
+    id: 'shop-ore-booster',
+    name: '矿石增幅器',
+    description: '所有采掘器矿石产量每级 +20%（持续生效）',
+    category: 'production',
+    baseCost: 7,
+    costMultiplier: 1.6,
+    maxLevel: 3,
+    prerequisites: [{ itemId: 'shop-excavator-tuning', level: 1 }],
+  },
+
+  /** 生产类：设施速率乘子——每级 +10%（派生乘子，作用于全部 rawRate） */
+  'shop-overdrive': {
+    id: 'shop-overdrive',
+    name: '超频驱动',
+    description: '所有设施产出速率每级 +10%（持续生效）',
+    category: 'production',
+    baseCost: 12,
+    costMultiplier: 1.8,
+    maxLevel: 2,
+    prerequisites: [{ itemId: 'shop-ore-booster', level: 1 }],
+  },
+
+  /** 生产类：同位素产量乘子——每级 +25%（派生乘子，作用于 tickProduction 同位素产出） */
+  'shop-isotope-enrichment': {
+    id: 'shop-isotope-enrichment',
+    name: '同位素富集',
+    description: '同位素获取概率每级 +25%（持续生效）',
+    category: 'production',
+    baseCost: 9,
+    costMultiplier: 1.7,
+    maxLevel: 2,
+    prerequisites: [{ itemId: 'shop-credit-injection', level: 1 }],
+  },
+
+  // ════════════════════════════════════════════
+  // research（研究）— 3 项
+  // ════════════════════════════════════════════
 
   /** 研究类：购买后永久解锁研究中心 */
   'shop-research-subsidy': {
@@ -124,6 +201,34 @@ export const SHOP_ITEMS: Record<string, ShopItemSchema> = {
     },
   },
 
+  /** 研究类：研究成本折扣——每级 -10%（派生乘子，下限 0.1） */
+  'shop-research-grant': {
+    id: 'shop-research-grant',
+    name: '研究资助',
+    description: '所有科技研究成本每级 -10%（持续生效）',
+    category: 'research',
+    baseCost: 10,
+    costMultiplier: 1.7,
+    maxLevel: 3,
+    prerequisites: [{ itemId: 'shop-research-subsidy', level: 1 }],
+  },
+
+  /** 研究类：解锁 T3 研究——购买后 tier 3 科技可研究（派生布尔，shopBonuses.ts 读取） */
+  'shop-advanced-research': {
+    id: 'shop-advanced-research',
+    name: '高级研究授权',
+    description: '解锁 T3 层科技（量子采掘、聚变反应堆、量子精炼等）',
+    category: 'research',
+    baseCost: 20,
+    costMultiplier: 2.0,
+    maxLevel: 1,
+    prerequisites: [{ itemId: 'shop-research-grant', level: 2 }],
+  },
+
+  // ════════════════════════════════════════════
+  // facility（设施）— 3 项
+  // ════════════════════════════════════════════
+
   /** 设施类：转生后初始解锁氦-3 采掘器 */
   'shop-he3-permit': {
     id: 'shop-he3-permit',
@@ -139,6 +244,37 @@ export const SHOP_ITEMS: Record<string, ShopItemSchema> = {
     },
   },
 
+  /** 设施类：转生后初始解锁氘采掘器 */
+  'shop-deuterium-permit': {
+    id: 'shop-deuterium-permit',
+    name: '氘开采许可',
+    description: '每次转生后氘采掘器默认解锁',
+    category: 'facility',
+    baseCost: 14,
+    costMultiplier: 2.0,
+    maxLevel: 1,
+    prerequisites: [{ itemId: 'shop-he3-permit', level: 1 }],
+    onBaseline(state: GameState, level: number): void {
+      state.facilities.deuteriumExcavator.unlocked = true;
+    },
+  },
+
+  /** 设施类：设施等级上限提升——每级 +1（派生，effectiveMaxLevel 读取） */
+  'shop-level-cap': {
+    id: 'shop-level-cap',
+    name: '等级突破',
+    description: '设施等级上限每级 +1（裸上限 5，每级突破上限）',
+    category: 'facility',
+    baseCost: 18,
+    costMultiplier: 2.2,
+    maxLevel: 2,
+    prerequisites: [{ itemId: 'shop-credit-injection', level: 2 }],
+  },
+
+  // ════════════════════════════════════════════
+  // prestige（转生）— 2 项
+  // ════════════════════════════════════════════
+
   /** 转生类：转生后初始星尘加成 */
   'shop-stardust-resonance': {
     id: 'shop-stardust-resonance',
@@ -152,6 +288,18 @@ export const SHOP_ITEMS: Record<string, ShopItemSchema> = {
     onBaseline(state: GameState, level: number): void {
       state.stardust += 50 * level;
     },
+  },
+
+  /** 转生类：转生收益乘子——每级 +25%（派生乘子，作用于 computeStardustEarned） */
+  'shop-prestige-amplifier': {
+    id: 'shop-prestige-amplifier',
+    name: '转生增幅器',
+    description: '转生结算获得的星核每级 +25%（持续生效）',
+    category: 'prestige',
+    baseCost: 25,
+    costMultiplier: 2.5,
+    maxLevel: 2,
+    prerequisites: [{ itemId: 'shop-stardust-resonance', level: 1 }],
   },
 };
 
