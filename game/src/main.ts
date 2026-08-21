@@ -86,7 +86,7 @@ const repo = new IndexedDbSaveRepository();
 // T2-1: 分层存档后端——基线层('main') + 转生层('prestige') 独立持久化、原子写
 const stateBackend = new LayeredStateBackend(repo);
 // T0-1 事务仓库（模块级）：消费引擎与转生重置共用同一持久化路径
-const txRepo = new TransactionalRepository<GameState>(stateBackend, structuredClone);
+const txRepo = new TransactionalRepository<GameState>(stateBackend, (s) => structuredClone(s));
 const scene = new GameScene();
 let hud: Hud;
 let panel: Panel;
