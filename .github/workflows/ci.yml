@@ -21,5 +21,4 @@ jobs:
           cache: npm
           cache-dependency-path: game/package-lock.json
       - run: npm ci
-      - run: npm run build
       - run: npm test
