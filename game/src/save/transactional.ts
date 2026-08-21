@@ -62,8 +62,11 @@ export class TransactionalRepository<T> {
    * 事务期间对返回状态的修改只在内存中，不触及 IDB。
    */
   begin(currentState: T): Transaction<T> {
+    // 防御性清理：发现残留的未结束事务时自动清理，而非直接抛错。
+    // 残留事务通常意味着上一次 commit/rollback 未被正确调用
+    // （如 commit 内 save() 抛错后调用方未 catch，导致 txRepo 卡在 done=false, snapshot≠null）。
     if (!this.done && this.snapshot !== null) {
-      throw new Error('已有事务进行中，请先 commit 或 rollback');
+      this.cleanup();
     }
     this.snapshot = this.clone(currentState);
     this.workingState = currentState;
