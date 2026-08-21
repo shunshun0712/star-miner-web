@@ -99,7 +99,7 @@
     ],
     facility: [
       { name: '氦-3 开采许可', desc: '开局即解锁氦-3 采掘器', icon: ICONS.sun, baseCost: 5, costMult: 2.0, maxLevel: 1, level: 1, status: 'maxed' },
-      { name: '氘开采许可', desc: '开局即解锁氘采掘器（前置：氦-3 许可）', icon: ICONS.dot, baseCost: 15, costMult: 2.5, maxLevel: 1, level: 0, status: 'purchasable', lockReason: '' },
+      { name: '氘开采许可', desc: '开局即解锁氘采掘器', icon: ICONS.dot, baseCost: 15, costMult: 2.5, maxLevel: 1, level: 0, status: 'purchasable', lockReason: '' },
       { name: '等级突破', desc: '所有设施最大等级 +2 / 级', icon: ICONS.arrowUp, baseCost: 8, costMult: 2.0, maxLevel: 5, level: 1, status: 'purchasable' },
     ],
     prestige: [
