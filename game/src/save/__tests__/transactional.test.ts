@@ -277,13 +277,17 @@ describe('事务生命周期', () => {
     expect(() => tx.getState()).toThrow('事务已结束');
   });
 
-  it('同时开两个事务抛异常', () => {
+  it('同时开两个事务时自动清理旧事务', () => {
     const state = makeState();
     const backend = new InMemoryBackend<GameState>(deepClone(state));
     const repo = new TransactionalRepository(backend, deepClone);
 
-    repo.begin(state);
-    expect(() => repo.begin(state)).toThrow('已有事务进行中');
+    const tx1 = repo.begin(state);
+    // 修复后：begin() 不再抛异常，而是自动清理旧事务元数据后开新事务
+    const tx2 = repo.begin(state);
+    expect(tx1.isDone()).toBe(true);
+    expect(tx2.isDone()).toBe(false);
+    tx2.rollback();
   });
 
   it('事务结束后可以开新事务', async () => {

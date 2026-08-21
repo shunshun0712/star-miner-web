@@ -353,15 +353,17 @@ describe('executePrestigeReset — 转生重置事务', () => {
     expect(tx.isDone()).toBe(true);
   });
 
-  it('已有活跃事务时启动新事务失败', async () => {
+  it('已有活跃事务时启动新事务自动清理旧事务', async () => {
     const initial = progressedState(250);
     const backend = new InMemoryBackend<GameState>(initial);
     const repo = new TransactionalRepository<GameState>(backend, structuredClone);
 
     const tx = repo.begin(initial);
+    // 修复后：begin() 自动清理旧事务，executePrestigeReset 可以正常执行
     const r = await executePrestigeReset(repo, initial, T1);
-    expect(r.ok).toBe(false);
-    tx.rollback();
+    expect(r.ok).toBe(true);
+    // 旧事务已被自动清理标记为 done
+    expect(tx.isDone()).toBe(true);
   });
 
   it('连续两次转生：prestigeLevel 与 history 累积', async () => {
