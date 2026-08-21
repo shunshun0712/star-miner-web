@@ -291,7 +291,16 @@ export async function executePrestigeReset(
   }
 
   overwriteState(tx.getState(), plan.rebuiltState);
-  await tx.commit();
+
+  // commit 失败时 rollback 事务并返回错误，防止 txRepo 永久卡死
+  try {
+    await tx.commit();
+  } catch (commitErr) {
+    if (!tx.isDone()) {
+      tx.rollback();
+    }
+    return { ok: false, error: commitErr instanceof Error ? commitErr.message : '提交转生事务失败' };
+  }
 
   // current 引用即事务工作状态（begin 不拷贝），commit 后已是重建后的状态
   return { ok: true, state: current, stardustEarned: plan.stardustEarned, preSnapshot: plan.preSnapshot };
@@ -317,6 +326,15 @@ export async function rollbackPrestigeReset(
     prestige: structuredClone(snapshot.prestige),
   };
   overwriteState(tx.getState(), restored);
-  await tx.commit();
+
+  // commit 失败时 rollback 事务并返回错误，防止 txRepo 永久卡死
+  try {
+    await tx.commit();
+  } catch (commitErr) {
+    if (!tx.isDone()) {
+      tx.rollback();
+    }
+    return { ok: false, error: commitErr instanceof Error ? commitErr.message : '回滚转生事务失败' };
+  }
   return { ok: true, state: current };
 }

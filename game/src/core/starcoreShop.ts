@@ -434,8 +434,15 @@ export async function purchaseItem(
     item.onPurchase(ws, newLevel);
   }
 
-  // 5. 原子提交
-  await tx.commit();
+  // 5. 原子提交——commit 失败时 rollback 事务并返回错误，防止 txRepo 永久卡死
+  try {
+    await tx.commit();
+  } catch (commitErr) {
+    if (!tx.isDone()) {
+      tx.rollback();
+    }
+    return { ok: false, error: commitErr instanceof Error ? commitErr.message : '提交事务失败' };
+  }
 
   return { ok: true, state, itemId, newLevel, cost };
 }

@@ -95,10 +95,11 @@ export class ConsumptionEngine {
       return { ok: true, event: existing };
     }
 
-    // 开启事务（快照在此刻拍下）
-    const tx = this.repo.begin(state);
-
+    // 开启事务（快照在此刻拍下）——begin 放在 try 块内部，确保 begin 抛错也能被 catch 捕获
+    let tx: Transaction<GameState> | undefined;
     try {
+      tx = this.repo.begin(state);
+
       const txState = tx.getState();
 
       // 1. 校验：检查资源余额是否充足
@@ -147,8 +148,8 @@ export class ConsumptionEngine {
 
       return { ok: true, event };
     } catch (err) {
-      // 异常时回滚事务（如果尚未结束）
-      if (!tx.isDone()) {
+      // 异常时回滚事务（如果尚未结束）——tx 可能在 begin 前就抛错，需判空
+      if (tx && !tx.isDone()) {
         tx.rollback();
       }
       return { ok: false, reason: `消耗事务异常: ${err instanceof Error ? err.message : String(err)}` };
@@ -174,9 +175,10 @@ export class ConsumptionEngine {
       return { ok: false, reason: `消耗事件 ${eventId} 已回滚` };
     }
 
-    const tx = this.repo.begin(state);
-
+    let tx: Transaction<GameState> | undefined;
     try {
+      tx = this.repo.begin(state);
+
       const txState = tx.getState();
 
       // 逆向操作：归还消耗的资源
@@ -199,7 +201,7 @@ export class ConsumptionEngine {
 
       return { ok: true, event };
     } catch (err) {
-      if (!tx.isDone()) {
+      if (tx && !tx.isDone()) {
         tx.rollback();
       }
       return { ok: false, reason: `回滚异常: ${err instanceof Error ? err.message : String(err)}` };
