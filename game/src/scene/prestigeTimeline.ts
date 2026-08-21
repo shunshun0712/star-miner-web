@@ -55,3 +55,19 @@ export function prestigePhaseAt(elapsedSec: number): PrestigePhaseState {
   const t = elapsedSec - collapse - burst;
   return { phase: 'rebirth', phaseProgress: t / rebirth, overall: elapsedSec / PRESTIGE_FX_TOTAL, elapsed: elapsedSec };
 }
+
+/**
+ * F1：转生动画期间是否应冻结交互（禁用 OrbitControls + 拦截点击）。
+ *
+ * 这是驱动 `controls.enabled` 的纯契约：
+ * - 未开始（elapsedSec < 0，idle）→ false → controls.enabled = true
+ * - 动画进行中（0 ≤ elapsedSec < TOTAL，collapse/burst/rebirth）→ true → controls.enabled = false
+ * - 动画结束（elapsedSec ≥ TOTAL，done）→ false → controls.enabled = true
+ *
+ * 与 prestigeFX.isActive() 语义一致（isActive 跟踪 FX 实例的 active 标志 + 阶段计时），
+ * 但本函数不依赖 Three.js，可在 node 环境单测；gameScene 的 frame 循环用 prestigeFX.isActive()
+ * 作为实际门禁（与 resolve 触发点同源），本函数是并行表达的同一时间窗契约。
+ */
+export function isPrestigeAnimationActive(elapsedSec: number): boolean {
+  return elapsedSec >= 0 && elapsedSec < PRESTIGE_FX_TOTAL;
+}

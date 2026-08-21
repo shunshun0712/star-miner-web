@@ -68,6 +68,8 @@ export class GameScene {
   private prestigeFX: PrestigeFX | null = null;
   /** T2-3：转生动画结束回调（playPrestigeSequence 的 Promise resolver） */
   private prestigeResolver: (() => void) | null = null;
+  /** F1：转生动画期间的全屏点击拦截遮罩（防止点击穿透到 3D 场景） */
+  private prestigeOverlay: HTMLDivElement | null = null;
   private reactorActivity = 0;
   private transportCongested = false;
   private raycaster = new THREE.Raycaster();
@@ -202,6 +204,8 @@ export class GameScene {
     this.prestigeFX?.dispose();
     this.prestigeFX = null;
     this.prestigeResolver = null;
+    // F1：清理可能残留的转生动画遮罩
+    this.hidePrestigeOverlay();
 
     // M3：释放共享材质缓存（cache + 单例），并在释放后重建，供 reinit 重新构建时使用
     materials.disposeAll();
@@ -564,9 +568,32 @@ export class GameScene {
     if (!this.prestigeFX) return Promise.resolve();
     // 复用现有实例：动画结束（finish）后已自隐藏，可再次 start
     this.prestigeFX.start(this.elapsed);
+    // F1：动画期间冻结交互——禁用 OrbitControls（防旋转/缩放）+ 全屏遮罩（防点击穿透到 3D 场景）
+    if (this.controls) this.controls.enabled = false;
+    this.showPrestigeOverlay();
     return new Promise<void>((resolve) => {
       this.prestigeResolver = resolve;
     });
+  }
+
+  /** F1：显示全屏透明遮罩，拦截动画期间的点击事件（防穿透到 3D 场景与设施选择） */
+  private showPrestigeOverlay(): void {
+    if (this.prestigeOverlay) return;
+    const overlay = document.createElement('div');
+    overlay.className = 'prestige-interaction-lock';
+    overlay.style.cssText =
+      'position:fixed;inset:0;z-index:9999;pointer-events:auto;background:transparent;cursor:wait;';
+    overlay.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(overlay);
+    this.prestigeOverlay = overlay;
+  }
+
+  /** F1：移除转生动画遮罩，恢复交互 */
+  private hidePrestigeOverlay(): void {
+    if (this.prestigeOverlay) {
+      this.prestigeOverlay.remove();
+      this.prestigeOverlay = null;
+    }
   }
 
   private buildLabel(id: FacilityId): void {
@@ -682,6 +709,9 @@ export class GameScene {
     // T2-3：转生仪式动画（墙钟驱动，挂在主循环内，不另起 rAF）
     this.prestigeFX?.update(dt, this.elapsed);
     if (this.prestigeResolver && this.prestigeFX && !this.prestigeFX.isActive()) {
+      // F1：动画结束——恢复交互（controls.enabled = true）+ 移除全屏遮罩
+      if (this.controls) this.controls.enabled = true;
+      this.hidePrestigeOverlay();
       const resolve = this.prestigeResolver;
       this.prestigeResolver = null;
       resolve();

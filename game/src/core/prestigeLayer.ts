@@ -41,6 +41,11 @@ export interface PrestigeUnlockSchema {
  *
  * 新增解锁只需追加一项；validateState 会据此过滤存档里的非法 unlocked id，
  * 防止恶意存档注入任意字符串算入永久 buff（参照 M4 research/achievements 白名单惯例）。
+ *
+ * @deprecated M4 星核商店（shopPurchases + applyShopBonuses）已提供等效的永久加成机制
+ * （shop-starting-fund 替代 prestige-start-credits，shop-he3-permit 替代 prestige-he3-unlock）。
+ * 本注册表保留读取路径以兼容旧存档（unlocked 非空时仍会 apply），但无生产代码写入 unlocked，
+ * 新功能应使用 SHOP_ITEMS + onBaseline 回调而非此注册表。
  */
 export const PRESTIGE_UNLOCKS: Record<string, PrestigeUnlockSchema> = {
   /** 转生后初始信用点 +500（而非裸初始态 100） */

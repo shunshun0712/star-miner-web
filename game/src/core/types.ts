@@ -95,7 +95,14 @@ export interface GameState {
  * - history：转生历史快照列表，每条记录转生时刻的基线层摘要，供转生仪式"成就回顾"展示
  */
 export interface PrestigeLayer {
-  /** 永久解锁列表——转生后基线层据此获得永久 buff（不随重置清空） */
+  /**
+   * 永久解锁列表——转生后基线层据此获得永久 buff（不随重置清空）。
+   *
+   * @deprecated M4 星核商店（shopPurchases + applyShopBonuses）已替代此字段的永久加成功能。
+   * 本字段无生产代码写入路径（createEmptyPrestigeLayer 初始化为 []，planPrestigeReset 仅原样拷贝），
+   * 新功能应使用 shopPurchases + SHOP_ITEMS.onBaseline 回调。
+   * 保留此字段以兼容旧存档迁移（unlocked 非空时 buildPrestigeBaseline 仍会 apply PRESTIGE_UNLOCKS）。
+   */
   unlocked: string[];
   /** 星核余额——转生货币（区别于基线层的星尘资源 stardust） */
   stardust: number;

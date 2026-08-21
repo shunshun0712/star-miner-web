@@ -12,6 +12,7 @@ import {
   PRESTIGE_FX_DURATIONS,
   PRESTIGE_FX_TOTAL,
   prestigePhaseAt,
+  isPrestigeAnimationActive,
 } from '../../scene/prestigeTimeline';
 import type { GameState } from '../types';
 
@@ -221,5 +222,101 @@ describe('prestigePhaseAt — 动画时间线', () => {
       expect(o).toBeGreaterThanOrEqual(prev);
       prev = o;
     }
+  });
+});
+
+// ════════════════════════════════════════════
+// F1：动画期间冻结交互契约（驱动 controls.enabled）
+// ════════════════════════════════════════════
+//
+// GameScene 无法在 node 环境实例化（依赖 Three.js WebGLRenderer + DOM），
+// 因此 controls.enabled 的赋值（DOM 接线）无法直接单测；这里测的是驱动它的
+// 纯契约 isPrestigeAnimationActive——gameScene 的 frame 循环用 prestigeFX.isActive()
+// 作实际门禁，与本函数表达同一时间窗（[0, TOTAL) 内冻结）。
+// 映射关系：controls.enabled = !isPrestigeAnimationActive(elapsedSinceStart)。
+
+describe('isPrestigeAnimationActive — 动画冻结交互契约（F1）', () => {
+  it('未开始（elapsedSec < 0，idle）→ false → controls.enabled = true', () => {
+    expect(isPrestigeAnimationActive(-1)).toBe(false);
+    expect(isPrestigeAnimationActive(-0.01)).toBe(false);
+  });
+
+  it('动画起点 elapsedSec=0 → true → controls.enabled = false', () => {
+    expect(isPrestigeAnimationActive(0)).toBe(true);
+  });
+
+  it('collapse 阶段（0 < t < 1.6）→ true → controls.enabled = false', () => {
+    expect(isPrestigeAnimationActive(0.001)).toBe(true);
+    expect(isPrestigeAnimationActive(PRESTIGE_FX_DURATIONS.collapse / 2)).toBe(true);
+    expect(isPrestigeAnimationActive(PRESTIGE_FX_DURATIONS.collapse - 0.001)).toBe(true);
+  });
+
+  it('collapse→burst 边界（t=1.6）→ true（burst 仍在动画窗内）', () => {
+    expect(isPrestigeAnimationActive(PRESTIGE_FX_DURATIONS.collapse)).toBe(true);
+  });
+
+  it('burst 阶段（1.6 ≤ t < 2.4）→ true → controls.enabled = false', () => {
+    expect(isPrestigeAnimationActive(PRESTIGE_FX_DURATIONS.collapse + 0.4)).toBe(true);
+    expect(isPrestigeAnimationActive(PRESTIGE_FX_DURATIONS.collapse + PRESTIGE_FX_DURATIONS.burst - 0.001)).toBe(true);
+  });
+
+  it('rebirth 阶段（2.4 ≤ t < 4.2）→ true → controls.enabled = false', () => {
+    const rebirthStart = PRESTIGE_FX_DURATIONS.collapse + PRESTIGE_FX_DURATIONS.burst;
+    expect(isPrestigeAnimationActive(rebirthStart)).toBe(true);
+    expect(isPrestigeAnimationActive(rebirthStart + 0.9)).toBe(true);
+    expect(isPrestigeAnimationActive(PRESTIGE_FX_TOTAL - 0.001)).toBe(true);
+  });
+
+  it('动画结束（elapsedSec ≥ TOTAL=4.2）→ false → controls.enabled = true', () => {
+    expect(isPrestigeAnimationActive(PRESTIGE_FX_TOTAL)).toBe(false);
+    expect(isPrestigeAnimationActive(PRESTIGE_FX_TOTAL + 0.01)).toBe(false);
+    expect(isPrestigeAnimationActive(PRESTIGE_FX_TOTAL + 10)).toBe(false);
+  });
+
+  it('与 prestigePhaseAt 一致：active 当且仅当 phase ∈ {collapse,burst,rebirth}', () => {
+    // 采样整个时间轴，断言两函数语义一致
+    for (let i = 0; i <= 100; i += 1) {
+      const t = (i / 100) * (PRESTIGE_FX_TOTAL + 1) - 0.5; // 覆盖 idle(-0.5) 到 done(4.7)
+      const phase = prestigePhaseAt(t).phase;
+      const active = isPrestigeAnimationActive(t);
+      const inAnimationPhase = phase === 'collapse' || phase === 'burst' || phase === 'rebirth';
+      expect(active).toBe(inAnimationPhase);
+    }
+  });
+
+  it('动画窗内全程为 true（冻结不中断），窗外全程 false（无残留冻结）', () => {
+    // 窗内：从 0 到 TOTAL-ε 每个采样点都 true
+    let allActive = true;
+    for (let i = 0; i < 200; i += 1) {
+      const t = (i / 200) * (PRESTIGE_FX_TOTAL - 0.001);
+      if (!isPrestigeAnimationActive(t)) allActive = false;
+    }
+    expect(allActive).toBe(true);
+
+    // 窗外（结束后）：从 TOTAL 到 TOTAL+5 每个采样点都 false
+    let allInactive = true;
+    for (let i = 0; i <= 50; i += 1) {
+      const t = PRESTIGE_FX_TOTAL + (i / 50) * 5;
+      if (isPrestigeAnimationActive(t)) allInactive = false;
+    }
+    expect(allInactive).toBe(true);
+  });
+
+  it('controls.enabled 映射：动画期间 false，结束后恢复 true（契约断言）', () => {
+    // 这条用例显式表达 orchestrator 要求的验收语义：
+    // "动画期间 controls.enabled === false，动画结束后恢复 true"
+    // controls.enabled = !isPrestigeAnimationActive(elapsedSinceStart)
+    const controlsEnabledDuring = (elapsedSec: number): boolean => !isPrestigeAnimationActive(elapsedSec);
+
+    // 动画期间（4 个采样点）→ enabled === false
+    for (const t of [0, 0.8, 1.6, 2.0, 3.0, 4.19]) {
+      expect(controlsEnabledDuring(t)).toBe(false);
+    }
+    // 动画结束后 → enabled === true
+    for (const t of [PRESTIGE_FX_TOTAL, PRESTIGE_FX_TOTAL + 0.1, 100]) {
+      expect(controlsEnabledDuring(t)).toBe(true);
+    }
+    // 未开始 → enabled === true
+    expect(controlsEnabledDuring(-1)).toBe(true);
   });
 });
