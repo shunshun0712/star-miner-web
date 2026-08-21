@@ -95,7 +95,7 @@
     research: [
       { name: '研究补贴', desc: '研究成本 -5% / 级', icon: ICONS.book, baseCost: 2, costMult: 1.6, maxLevel: 10, level: 3, status: 'purchasable' },
       { name: '研究资助', desc: '研究速度 +10% / 级', icon: ICONS.microscope, baseCost: 3, costMult: 1.8, maxLevel: 8, level: 2, status: 'purchasable' },
-      { name: '高级研究授权', desc: '解锁 T4 科技（前置：研究资助 Lv.2）', icon: ICONS.cap, baseCost: 10, costMult: 2.5, maxLevel: 1, level: 0, status: 'locked', lockReason: '需研究资助 Lv.2' },
+      { name: '高级研究授权', desc: '解锁 T4 科技', icon: ICONS.cap, baseCost: 10, costMult: 2.5, maxLevel: 1, level: 0, status: 'locked', lockReason: '需研究资助 Lv.2' },
     ],
     facility: [
       { name: '氦-3 开采许可', desc: '开局即解锁氦-3 采掘器', icon: ICONS.sun, baseCost: 5, costMult: 2.0, maxLevel: 1, level: 1, status: 'maxed' },
@@ -411,12 +411,8 @@
         const btnText = isMaxed
           ? '已满级'
           : item.status === 'locked'
-          ? '已锁定'
+          ? (item.lockReason ? `${item.lockReason}` : '已锁定')
           : '购买';
-
-        const lockReasonEl = item.status === 'locked' && item.lockReason
-          ? `<div class="shop-item-lock-reason">${ICONS.lock} ${item.lockReason}</div>`
-          : '';
 
         const costEl = isMaxed
           ? '<span class="shop-item-cost">—</span>'
@@ -433,7 +429,6 @@
             <div class="shop-item-info">
               <div class="shop-item-name">${item.name}</div>
               <div class="shop-item-desc">${item.desc}</div>
-              ${lockReasonEl}
             </div>
           </div>
           <div class="shop-item-level">Lv.${item.level} / ${item.maxLevel}</div>
