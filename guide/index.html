@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="creative-medium" content="interactive-prototype" />
+  <title>星际矿站 · 操作指南</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- 星空背景 -->
+  <canvas id="starfield"></canvas>
+
+  <!-- 主容器 -->
+  <div class="app">
+    <!-- 左侧侧边栏 -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <div class="logo-icon">
+            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <polygon points="16,2 30,10 30,22 16,30 2,22 2,10" fill="none" stroke="currentColor" stroke-width="1.5"/>
+              <circle cx="16" cy="16" r="5" fill="currentColor" opacity="0.8"/>
+              <line x1="16" y1="2" x2="16" y2="11" stroke="currentColor" stroke-width="1"/>
+              <line x1="16" y1="21" x2="16" y2="30" stroke="currentColor" stroke-width="1"/>
+              <line x1="2" y1="16" x2="11" y2="16" stroke="currentColor" stroke-width="1"/>
+              <line x1="21" y1="16" x2="30" y2="16" stroke="currentColor" stroke-width="1"/>
+            </svg>
+          </div>
+          <div class="logo-text">
+            <span class="logo-title">STAR MINER</span>
+            <span class="logo-sub">操作指南 · v0.4</span>
+            <span class="sim-badge">SIM 模拟版</span>
+          </div>
+        </div>
+      </div>
+
+      <nav class="nav-list" id="navList">
+        <button class="nav-item active" data-section="overview">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              <polyline points="9,22 9,12 15,12 15,22"/>
+            </svg>
+          </span>
+          <span class="nav-label">总览</span>
+          <span class="nav-key">O</span>
+        </button>
+
+        <button class="nav-item" data-section="reactor">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+            </svg>
+          </span>
+          <span class="nav-label">反应堆</span>
+          <span class="nav-badge">M2</span>
+        </button>
+
+        <button class="nav-item" data-section="research">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2zM9 9h6v6H9z"/>
+            </svg>
+          </span>
+          <span class="nav-label">研究</span>
+          <span class="nav-key">R</span>
+        </button>
+
+        <button class="nav-item" data-section="prestige">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/>
+            </svg>
+          </span>
+          <span class="nav-label">转生</span>
+          <span class="nav-badge">M3</span>
+        </button>
+
+        <button class="nav-item" data-section="shop">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <path d="M16 10a4 4 0 0 1-8 0"/>
+            </svg>
+          </span>
+          <span class="nav-label">星核商店</span>
+          <span class="nav-badge">M4</span>
+        </button>
+
+        <button class="nav-item" data-section="shortcuts">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <rect x="2" y="4" width="20" height="16" rx="2"/>
+              <path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M6 16h12"/>
+            </svg>
+          </span>
+          <span class="nav-label">快捷键</span>
+          <span class="nav-key">K</span>
+        </button>
+
+        <button class="nav-item" data-section="save">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17,21 17,13 7,13 7,21"/>
+              <polyline points="7,3 7,8 15,8"/>
+            </svg>
+          </span>
+          <span class="nav-label">存档管理</span>
+          <span class="nav-key">M</span>
+        </button>
+
+        <div class="nav-divider"></div>
+
+        <button class="nav-item nav-item--readme" data-section="readme">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+              <path d="M8 6h8M8 10h8M8 14h5"/>
+            </svg>
+          </span>
+          <span class="nav-label">README 原文</span>
+          <span class="nav-badge">REF</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="status-pill status-pill--sim">
+          <span class="status-dot"></span>
+          <span class="status-text">模拟运行中 · SIM MODE</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="main">
+      <header class="main-header">
+        <div class="header-left">
+          <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="菜单">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <line x1="3" y1="12" x2="21" y2="12"/>
+              <line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
+          <h1 class="page-title" id="pageTitle">总览</h1>
+          <span class="section-badge" id="sectionBadge"></span>
+        </div>
+        <div class="header-right">
+          <div class="resource-chips">
+            <div class="chip">
+              <span class="chip-dot chip-dot--credit"></span>
+              <span class="chip-label">信用点</span>
+            </div>
+            <div class="chip">
+              <span class="chip-dot chip-dot--crystal"></span>
+              <span class="chip-label">晶体</span>
+            </div>
+            <div class="chip">
+              <span class="chip-dot chip-dot--isotope"></span>
+              <span class="chip-label">同位素</span>
+            </div>
+            <div class="chip">
+              <span class="chip-dot chip-dot--starcore"></span>
+              <span class="chip-label">星核</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- 内容面板 -->
+      <div class="content-area" id="contentArea">
+        <!-- 总览 -->
+        <section class="panel active" id="panel-overview">
+          <div class="hero-card">
+            <div class="hero-bg"></div>
+            <div class="hero-content">
+              <span class="hero-tag">ORIGINAL SCI-FI IDLE GAME · 模拟演示版</span>
+              <h2 class="hero-title">星际矿站<br/><span>Star Miner</span></h2>
+              <p class="hero-desc">在 Aurora-1 星球上修复采掘器、运输线与晶体精炼厂，通过自动生产、设施升级、能源策略、科技研究与无人机事件扩展你的矿站。</p>
+              <div class="hero-stats">
+                <div class="stat">
+                  <span class="stat-value">29</span>
+                  <span class="stat-label">科技节点</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat">
+                  <span class="stat-value">30</span>
+                  <span class="stat-label">成就</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat">
+                  <span class="stat-value">15</span>
+                  <span class="stat-label">星核物品</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat">
+                  <span class="stat-value">8h</span>
+                  <span class="stat-label">离线收益</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="panel-card">
+              <div class="card-header">
+                <h3 class="card-title">核心生产链</h3>
+                <span class="card-tag">PRODUCTION</span>
+              </div>
+              <div class="chain-flow">
+                <div class="chain-node">
+                  <div class="chain-icon" style="color: var(--accent-cool);">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4"/></svg>
+                  </div>
+                  <span>星尘采掘器</span>
+                </div>
+                <div class="chain-arrow">→</div>
+                <div class="chain-node">
+                  <div class="chain-icon" style="color: var(--accent-warm);">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4"/></svg>
+                  </div>
+                  <span>氦-3 采掘器</span>
+                </div>
+                <div class="chain-arrow">→</div>
+                <div class="chain-node">
+                  <div class="chain-icon" style="color: var(--res-isotope);">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4"/></svg>
+                  </div>
+                  <span>氘采掘器</span>
+                </div>
+                <div class="chain-arrow">→</div>
+                <div class="chain-node">
+                  <div class="chain-icon" style="color: var(--accent-strong);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="8" width="18" height="8" rx="2"/><line x1="7" y1="12" x2="7" y2="12"/></svg>
+                  </div>
+                  <span>磁轨运输线</span>
+                </div>
+                <div class="chain-arrow">→</div>
+                <div class="chain-node">
+                  <div class="chain-icon" style="color: var(--res-crystal);">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12,2 22,12 12,22 2,12"/></svg>
+                  </div>
+                  <span>晶体精炼厂</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel-card">
+              <div class="card-header">
+                <h3 class="card-title">能源策略</h3>
+                <span class="card-tag">ENERGY</span>
+              </div>
+              <div class="strategy-list">
+                <div class="strategy-item">
+                  <div class="strategy-dot" style="background: var(--accent-cool);"></div>
+                  <div class="strategy-info">
+                    <span class="strategy-name">采掘优先</span>
+                    <span class="strategy-desc">能源向采掘倾斜，加快原料产出</span>
+                  </div>
+                  <kbd>1</kbd>
+                </div>
+                <div class="strategy-item">
+                  <div class="strategy-dot" style="background: var(--accent-strong);"></div>
+                  <div class="strategy-info">
+                    <span class="strategy-name">均衡运行</span>
+                    <span class="strategy-desc">采掘与精炼各占一半</span>
+                  </div>
+                  <kbd>2</kbd>
+                </div>
+                <div class="strategy-item">
+                  <div class="strategy-dot" style="background: var(--accent-warm);"></div>
+                  <div class="strategy-info">
+                    <span class="strategy-name">精炼优先</span>
+                    <span class="strategy-desc">能源向精炼倾斜，提升晶体产出</span>
+                  </div>
+                  <kbd>3</kbd>
+                </div>
+                <div class="strategy-item">
+                  <div class="strategy-dot" style="background: var(--accent-hot);"></div>
+                  <div class="strategy-info">
+                    <span class="strategy-name">聚变模式</span>
+                    <span class="strategy-desc">全功率运转，消耗能量储备</span>
+                  </div>
+                  <span class="strategy-lock">高级</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel-card">
+            <div class="card-header">
+              <h3 class="card-title">高级资源链</h3>
+              <span class="card-tag">TIER 3 / 4</span>
+            </div>
+            <div class="resource-chain">
+              <div class="res-item">
+                <div class="res-dot" style="background: var(--res-isotope);"></div>
+                <span class="res-name">同位素</span>
+                <span class="res-desc">氘采掘副产物 · T1</span>
+              </div>
+              <div class="res-arrow">→</div>
+              <div class="res-item">
+                <div class="res-dot" style="background: var(--res-starcore);"></div>
+                <span class="res-name">反物质</span>
+                <span class="res-desc">反应堆产出 · T3</span>
+              </div>
+              <div class="res-arrow">→</div>
+              <div class="res-item">
+                <div class="res-dot" style="background: var(--accent-cool);"></div>
+                <span class="res-name">暗物质</span>
+                <span class="res-desc">深空探索 · T4</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- M2 反应堆 -->
+        <section class="panel" id="panel-reactor">
+          <!-- 反应堆概览 -->
+          <div class="reactor-overview">
+            <!-- 左侧仪表盘 -->
+            <div class="gauge-block">
+              <div class="gauge-panel">
+                <span class="rivet rivet--tl"></span>
+                <span class="rivet rivet--tr"></span>
+                <span class="rivet rivet--bl"></span>
+                <span class="rivet rivet--br"></span>
+                <div class="gauge-panel-serial">UNIT-M2-A / SECTOR 07</div>
+                <div class="gauge-row">
+                  <!-- 功率表 -->
+                  <div class="analog-gauge" id="gaugePower">
+                    <svg viewBox="0 0 200 130" class="gauge-svg">
+                      <!-- 刻度弧底 -->
+                      <path d="M20 115 A 80 80 0 0 1 180 115" fill="none" stroke="var(--border)" stroke-width="2"/>
+                      <!-- 主刻度 -->
+                      <g stroke="var(--text-muted)" stroke-width="1.5">
+                        <line x1="20" y1="115" x2="28" y2="108"/>
+                        <line x1="34.6" y1="75" x2="43" y2="71"/>
+                        <line x1="80" y1="40" x2="87" y2="48"/>
+                        <line x1="120" y1="40" x2="113" y2="48"/>
+                        <line x1="165.4" y1="75" x2="157" y2="71"/>
+                        <line x1="180" y1="115" x2="172" y2="108"/>
+                      </g>
+                      <!-- 次刻度 -->
+                      <g stroke="var(--border-strong)" stroke-width="1" opacity="0.6">
+                        <line x1="25" y1="95" x2="31" y2="91"/>
+                        <line x1="54" y1="55" x2="61" y2="56"/>
+                        <line x1="100" y1="35" x2="100" y2="43"/>
+                        <line x1="146" y1="55" x2="139" y2="56"/>
+                        <line x1="175" y1="95" x2="169" y2="91"/>
+                      </g>
+                      <!-- 危险区红弧 -->
+                      <path d="M150 52 A 80 80 0 0 1 180 115" fill="none" stroke="var(--accent-danger)" stroke-width="3" opacity="0.5"/>
+                      <!-- 指针轴 -->
+                      <circle cx="100" cy="115" r="5" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="1"/>
+                      <circle cx="100" cy="115" r="2" fill="var(--text-secondary)"/>
+                      <!-- 指针 -->
+                      <g class="gauge-needle" style="transform-origin: 100px 115px; transform: rotate(-90deg);">
+                        <polygon points="100,115 97,42 100,36 103,42" fill="var(--accent-warm)"/>
+                        <line x1="100" y1="115" x2="100" y2="40" stroke="var(--bg-panel)" stroke-width="0.5"/>
+                      </g>
+                    </svg>
+                    <div class="gauge-label">功率输出</div>
+                    <div class="gauge-value" id="gaugePowerVal">0<span class="gauge-unit">%</span></div>
+                    <div class="gauge-scale">
+                      <span>0</span>
+                      <span>50</span>
+                      <span>100</span>
+                    </div>
+                  </div>
+                  <!-- 温度表 -->
+                  <div class="analog-gauge" id="gaugeTemp">
+                    <svg viewBox="0 0 200 130" class="gauge-svg">
+                      <path d="M20 115 A 80 80 0 0 1 180 115" fill="none" stroke="var(--border)" stroke-width="2"/>
+                      <g stroke="var(--text-muted)" stroke-width="1.5">
+                        <line x1="20" y1="115" x2="28" y2="108"/>
+                        <line x1="34.6" y1="75" x2="43" y2="71"/>
+                        <line x1="80" y1="40" x2="87" y2="48"/>
+                        <line x1="120" y1="40" x2="113" y2="48"/>
+                        <line x1="165.4" y1="75" x2="157" y2="71"/>
+                        <line x1="180" y1="115" x2="172" y2="108"/>
+                      </g>
+                      <g stroke="var(--border-strong)" stroke-width="1" opacity="0.6">
+                        <line x1="25" y1="95" x2="31" y2="91"/>
+                        <line x1="54" y1="55" x2="61" y2="56"/>
+                        <line x1="100" y1="35" x2="100" y2="43"/>
+                        <line x1="146" y1="55" x2="139" y2="56"/>
+                        <line x1="175" y1="95" x2="169" y2="91"/>
+                      </g>
+                      <path d="M140 57 A 80 80 0 0 1 180 115" fill="none" stroke="var(--accent-hot)" stroke-width="3" opacity="0.5"/>
+                      <circle cx="100" cy="115" r="5" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="1"/>
+                      <circle cx="100" cy="115" r="2" fill="var(--text-secondary)"/>
+                      <g class="gauge-needle" style="transform-origin: 100px 115px; transform: rotate(-60deg);">
+                        <polygon points="100,115 97,42 100,36 103,42" fill="var(--accent-cool)"/>
+                        <line x1="100" y1="115" x2="100" y2="40" stroke="var(--bg-panel)" stroke-width="0.5"/>
+                      </g>
+                    </svg>
+                    <div class="gauge-label">堆芯温度</div>
+                    <div class="gauge-value" id="gaugeTempVal">0<span class="gauge-unit">K</span></div>
+                    <div class="gauge-scale">
+                      <span>300</span>
+                      <span>1200</span>
+                      <span>2400</span>
+                    </div>
+                  </div>
+                </div>
+                <!-- 状态灯 -->
+                <div class="gauge-statusbar">
+                  <div class="status-led status-led--ok">
+                    <span class="led-dot"></span>
+                    <span class="led-label">PWR OK</span>
+                  </div>
+                  <div class="status-led status-led--ok">
+                    <span class="led-dot"></span>
+                    <span class="led-label">COOL NOM</span>
+                  </div>
+                  <div class="status-led status-led--warn">
+                    <span class="led-dot"></span>
+                    <span class="led-label">FLUX STDBY</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 中间反应堆核心 -->
+            <div class="reactor-visual">
+              <div class="reactor-core">
+                <div class="core-glow"></div>
+                <div class="core-center">
+                  <span class="core-label">REACTOR</span>
+                  <span class="core-value" id="activityValue">0%</span>
+                  <span class="core-sub">ACTIVITY</span>
+                </div>
+              </div>
+              <!-- 底部铭牌 -->
+              <div class="core-nameplate">
+                <span class="nameplate-model">IR-7A</span>
+                <span class="nameplate-serial">SN-M2-00417</span>
+              </div>
+            </div>
+
+            <!-- 右侧数据矩阵 -->
+            <div class="reactor-info">
+              <h2 class="section-title">M2 · 同位素反应堆</h2>
+              <p class="section-desc">消耗同位素激活 Buff、派遣深空探索、兑换高级资源。全部走 T1-1 ConsumptionEngine 原子事务，由墙钟驱动倒计时。</p>
+              <div class="info-matrix">
+                <div class="info-item">
+                  <span class="info-label">解锁条件</span>
+                  <span class="info-value">稀有同位素开采研究</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">活跃度范围</span>
+                  <span class="info-value">0 ~ 1.0（满载）</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Buff 封顶</span>
+                  <span class="info-value">×8（乘法叠加）</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">探索并发</span>
+                  <span class="info-value">每次仅限 1 路</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Buff 激活 -->
+          <div class="panel-card panel-card--riveted">
+            <div class="etched-serial">BUFF-ARRAY · M2-BF-01</div>
+            <span class="rivet rivet--tl"></span>
+            <span class="rivet rivet--tr"></span>
+            <span class="rivet rivet--bl"></span>
+            <span class="rivet rivet--br"></span>
+            <div class="card-header">
+              <h3 class="card-title">Buff 激活</h3>
+              <span class="card-tag">限时倍率</span>
+            </div>
+            <div class="buff-list">
+              <div class="buff-card">
+                <div class="buff-head">
+                  <div class="buff-name">
+                    <span class="buff-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                    </span>
+                    催化过载
+                  </div>
+                  <span class="buff-mult">×2</span>
+                </div>
+                <p class="buff-desc">全采掘产量翻倍</p>
+                <div class="buff-meta">
+                  <span class="meta-item"><strong>60</strong> 同位素</span>
+                  <span class="meta-item"><strong>10</strong> 分钟</span>
+                </div>
+                <button class="buff-btn">激活</button>
+              </div>
+
+              <div class="buff-card">
+                <div class="buff-head">
+                  <div class="buff-name">
+                    <span class="buff-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12,2 22,12 12,22 2,12"/></svg>
+                    </span>
+                    晶体共鸣
+                  </div>
+                  <span class="buff-mult">×1.5</span>
+                </div>
+                <p class="buff-desc">精炼产量提升 50%</p>
+                <div class="buff-meta">
+                  <span class="meta-item"><strong>90</strong> 同位素</span>
+                  <span class="meta-item"><strong>5</strong> 分钟</span>
+                </div>
+                <button class="buff-btn">激活</button>
+              </div>
+
+              <div class="buff-card">
+                <div class="buff-head">
+                  <div class="buff-name">
+                    <span class="buff-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3v18M5 8l7-5 7 5M5 16l7 5 7-5"/></svg>
+                    </span>
+                    同位素熔炉
+                  </div>
+                  <span class="buff-mult">×1.5</span>
+                </div>
+                <p class="buff-desc">全采掘长时低增益</p>
+                <div class="buff-meta">
+                  <span class="meta-item"><strong>40</strong> 同位素</span>
+                  <span class="meta-item"><strong>20</strong> 分钟</span>
+                </div>
+                <button class="buff-btn">激活</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 深空探索 -->
+          <div class="panel-card panel-card--riveted">
+            <div class="etched-serial">EXPEDITION CONSOLE · M2-EX-03</div>
+            <span class="rivet rivet--tl"></span>
+            <span class="rivet rivet--tr"></span>
+            <span class="rivet rivet--bl"></span>
+            <span class="rivet rivet--br"></span>
+            <div class="card-header">
+              <h3 class="card-title">深空探索派遣</h3>
+              <span class="card-tag">奖励任务</span>
+            </div>
+            <div class="explore-list">
+              <div class="explore-item">
+                <div class="explore-zone">
+                  <span class="zone-dot zone-dot--green"></span>
+                  <div>
+                    <div class="zone-name">近地小行星带</div>
+                    <div class="zone-risk">低风险 · 稳定</div>
+                  </div>
+                </div>
+                <div class="explore-cost">
+                  <strong>30</strong> 同位素
+                </div>
+                <div class="explore-time">
+                  <strong>1</strong> 分钟
+                </div>
+                <div class="explore-reward">
+                  <span class="reward-label">奖励</span>
+                  <span class="reward-value">+4 反物质</span>
+                </div>
+                <button class="explore-btn">派遣</button>
+              </div>
+
+              <div class="explore-item">
+                <div class="explore-zone">
+                  <span class="zone-dot zone-dot--yellow"></span>
+                  <div>
+                    <div class="zone-name">柯伊伯带</div>
+                    <div class="zone-risk">中风险</div>
+                  </div>
+                </div>
+                <div class="explore-cost">
+                  <strong>80</strong> 同位素
+                </div>
+                <div class="explore-time">
+                  <strong>3</strong> 分钟
+                </div>
+                <div class="explore-reward">
+                  <span class="reward-label">奖励</span>
+                  <span class="reward-value">+3 暗物质</span>
+                </div>
+                <button class="explore-btn">派遣</button>
+              </div>
+
+              <div class="explore-item">
+                <div class="explore-zone">
+                  <span class="zone-dot zone-dot--red"></span>
+                  <div>
+                    <div class="zone-name">蛇夫座深空</div>
+                    <div class="zone-risk">高风险远征</div>
+                  </div>
+                </div>
+                <div class="explore-cost">
+                  <strong>150</strong> 同位素
+                </div>
+                <div class="explore-time">
+                  <strong>6</strong> 分钟
+                </div>
+                <div class="explore-reward">
+                  <span class="reward-label">奖励</span>
+                  <span class="reward-value">+10 反物质</span>
+                </div>
+                <button class="explore-btn">派遣</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 碎片兑换 -->
+          <div class="panel-card panel-card--riveted">
+            <div class="etched-serial">CONVERSION RACK · M2-CV-02</div>
+            <span class="rivet rivet--tl"></span>
+            <span class="rivet rivet--tr"></span>
+            <span class="rivet rivet--bl"></span>
+            <span class="rivet rivet--br"></span>
+            <div class="card-header">
+              <h3 class="card-title">碎片兑换配方</h3>
+              <span class="card-tag">原子事务</span>
+            </div>
+            <div class="recipe-list">
+              <div class="recipe-item">
+                <div class="recipe-from">
+                  <span class="recipe-amt">25</span>
+                  <span class="recipe-name">同位素</span>
+                </div>
+                <div class="recipe-arrow">→</div>
+                <div class="recipe-to">
+                  <span class="recipe-amt">300</span>
+                  <span class="recipe-name">信用点</span>
+                </div>
+                <button class="recipe-btn">兑换</button>
+              </div>
+              <div class="recipe-item">
+                <div class="recipe-from">
+                  <span class="recipe-amt">40</span>
+                  <span class="recipe-name">同位素</span>
+                </div>
+                <div class="recipe-arrow">→</div>
+                <div class="recipe-to">
+                  <span class="recipe-amt">8</span>
+                  <span class="recipe-name">晶体</span>
+                </div>
+                <button class="recipe-btn">兑换</button>
+              </div>
+              <div class="recipe-item">
+                <div class="recipe-from">
+                  <span class="recipe-amt">3</span>
+                  <span class="recipe-name">反物质</span>
+                </div>
+                <div class="recipe-arrow">→</div>
+                <div class="recipe-to">
+                  <span class="recipe-amt">2</span>
+                  <span class="recipe-name">暗物质</span>
+                </div>
+                <button class="recipe-btn">兑换</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 研究 -->
+        <section class="panel" id="panel-research">
+          <div class="section-header-row">
+            <div>
+              <h2 class="section-title">研究中心 · 科技树</h2>
+              <p class="section-desc">四分支科技树，T0–T4 共 29 个可研究节点</p>
+            </div>
+            <div class="tech-tabs">
+              <button class="tech-tab active" data-branch="excavation">采掘</button>
+              <button class="tech-tab" data-branch="energy">能源</button>
+              <button class="tech-tab" data-branch="transport">运输</button>
+              <button class="tech-tab" data-branch="refinery">精炼</button>
+            </div>
+          </div>
+
+          <div class="tech-tree" id="techTree">
+            <!-- 动态生成 -->
+          </div>
+
+          <div class="panel-card mt-l">
+            <div class="card-header">
+              <h3 class="card-title">研究机制</h3>
+              <span class="card-tag">MECHANIC</span>
+            </div>
+            <div class="mechanic-grid">
+              <div class="mechanic-item">
+                <div class="mechanic-num">T0</div>
+                <div class="mechanic-body">
+                  <h4>基础阶段</h4>
+                  <p>开局即可研究的基础科技，建立生产循环</p>
+                </div>
+              </div>
+              <div class="mechanic-item">
+                <div class="mechanic-num">T1</div>
+                <div class="mechanic-body">
+                  <h4>发展阶段</h4>
+                  <p>解锁同位素反应堆与第一条高级资源线</p>
+                </div>
+              </div>
+              <div class="mechanic-item">
+                <div class="mechanic-num">T2</div>
+                <div class="mechanic-body">
+                  <h4>扩张阶段</h4>
+                  <p>运输优化与多设施协同，产能大幅提升</p>
+                </div>
+              </div>
+              <div class="mechanic-item">
+                <div class="mechanic-num">T3</div>
+                <div class="mechanic-body">
+                  <h4>高级阶段</h4>
+                  <p>反物质与暗物质生产，通往转生的关键</p>
+                </div>
+              </div>
+              <div class="mechanic-item">
+                <div class="mechanic-num">T4</div>
+                <div class="mechanic-body">
+                  <h4>终极阶段</h4>
+                  <p>巅峰科技，为下一次转生积累最大收益</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- M3 转生 -->
+        <section class="panel" id="panel-prestige">
+          <div class="prestige-hero">
+            <div class="prestige-orb">
+              <div class="orb-glow"></div>
+              <div class="orb-ring"></div>
+              <div class="orb-core">
+                <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M32 4l6 18 18 2-14 13 4 19-14-10-14 10 4-19L4 24l18-2z"/>
+                </svg>
+              </div>
+            </div>
+            <div class="prestige-hero-info">
+              <h2 class="section-title">M3 · 转生系统</h2>
+              <p class="section-desc">消耗当前进度换取星核，转生后基线重置但永久加成保留。仪式提供成就回顾。</p>
+              <div class="prestige-formula">
+                <div class="formula-label">星核计算公式</div>
+                <div class="formula-box">
+                  <code>星核 = floor(点数 × 转生增幅器倍率)</code>
+                </div>
+                <div class="formula-detail">
+                  点数 = 晶体/100 + 同位素/20 + 反物质/5 + 暗物质/2 + 星尘/1000
+                  <br/>
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ 2 × Σ(设施等级 - 1) + 5 × 研究项数
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 仪式动画 -->
+          <div class="panel-card">
+            <div class="card-header">
+              <h3 class="card-title">仪式动画阶段</h3>
+              <span class="card-tag">4.2s</span>
+            </div>
+            <div class="ritual-timeline">
+              <div class="ritual-step">
+                <div class="step-time">0.0 – 1.6s</div>
+                  <div class="step-dot" style="background: var(--accent-cool);"></div>
+                <div class="step-content">
+                  <h4>坍缩 Collapse</h4>
+                  <p>星体收缩，旧世界塌缩成奇点</p>
+                </div>
+              </div>
+              <div class="ritual-line"></div>
+              <div class="ritual-step">
+                <div class="step-time">1.6 – 2.4s</div>
+                  <div class="step-dot" style="background: var(--accent-warm);"></div>
+                <div class="step-content">
+                  <h4>爆发 Burst</h4>
+                  <p>核心闪光，粒子向外冲击</p>
+                </div>
+              </div>
+              <div class="ritual-line"></div>
+              <div class="ritual-step">
+                <div class="step-time">2.4 – 4.2s</div>
+                  <div class="step-dot" style="background: var(--accent-strong);"></div>
+                <div class="step-content">
+                  <h4>重生 Rebirth</h4>
+                  <p>新星展开，世界淡入</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="panel-card">
+              <div class="card-header">
+                <h3 class="card-title">转生后 · 重置</h3>
+                <span class="card-tag danger">BASELINE RESET</span>
+              </div>
+              <ul class="reset-list">
+                <li><span class="li-dot"></span>信用点、星尘、晶体归初始值</li>
+                <li><span class="li-dot"></span>同位素、反物质、暗物质清空</li>
+                <li><span class="li-dot"></span>所有设施等级回 1 / 锁定</li>
+                <li><span class="li-dot"></span>研究进度清空</li>
+                <li><span class="li-dot"></span>成就清空</li>
+                <li><span class="li-dot"></span>M2 反应堆活跃 Buff 清空</li>
+              </ul>
+            </div>
+
+            <div class="panel-card">
+              <div class="card-header">
+                <h3 class="card-title">转生后 · 保留</h3>
+                <span class="card-tag success">PRESTIGE LAYER</span>
+              </div>
+              <ul class="reset-list">
+                <li><span class="li-dot li-dot--green"></span>星核余额</li>
+                <li><span class="li-dot li-dot--green"></span>转生等级</li>
+                <li><span class="li-dot li-dot--green"></span>转生历史快照</li>
+                <li><span class="li-dot li-dot--green"></span>星核商店购买等级</li>
+                <li><span class="li-dot li-dot--green"></span>所有 onBaseline 永久加成</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <!-- M4 星核商店 -->
+        <section class="panel" id="panel-shop">
+          <div class="shop-header">
+            <div>
+              <h2 class="section-title">M4 · 星核商店</h2>
+              <p class="section-desc">15 种永久加成物品 · 5 大类 · 跨转生保留</p>
+            </div>
+            <div class="starcore-balance">
+              <span class="balance-icon">
+                <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12,2 15,9 22,9 16.5,13.5 18.5,21 12,16.5 5.5,21 7.5,13.5 2,9 9,9"/></svg>
+              </span>
+              <span class="balance-value">星核商店</span>
+            </div>
+          </div>
+
+          <!-- 分类标签 -->
+          <div class="shop-categories" id="shopCategories">
+            <button class="shop-cat active" data-cat="economy">经济 <span class="cat-count">3</span></button>
+            <button class="shop-cat" data-cat="production">生产 <span class="cat-count">4</span></button>
+            <button class="shop-cat" data-cat="research">研究 <span class="cat-count">3</span></button>
+            <button class="shop-cat" data-cat="facility">设施 <span class="cat-count">3</span></button>
+            <button class="shop-cat" data-cat="prestige">转生 <span class="cat-count">2</span></button>
+          </div>
+
+          <!-- 物品网格 -->
+          <div class="shop-grid" id="shopGrid">
+            <!-- 动态生成 -->
+          </div>
+
+          <!-- 机制说明 -->
+          <div class="grid-2 mt-l">
+            <div class="panel-card">
+              <div class="card-header">
+                <h3 class="card-title">购买机制</h3>
+                <span class="card-tag">COST</span>
+              </div>
+              <div class="mechanism-text">
+                <p><strong>成本公式：</strong><code>floor(baseCost × costMultiplier^level)</code>，每级更贵</p>
+                <p><strong>等级上限：</strong>达到 <code>maxLevel</code> 后满级不可再买</p>
+                <p><strong>事务流程：</strong>只读校验 → 扣星核 → 升等级 → onPurchase 即时效果 → commit</p>
+              </div>
+            </div>
+
+            <div class="panel-card">
+              <div class="card-header">
+                <h3 class="card-title">四态购买状态</h3>
+                <span class="card-tag">STATE</span>
+              </div>
+              <div class="state-list">
+                <div class="state-item">
+                  <span class="state-indicator state--purchasable"></span>
+                  <div>
+                    <div class="state-name">可购买</div>
+                    <div class="state-desc">星核充足 + 前置满足 + 未满级</div>
+                  </div>
+                </div>
+                <div class="state-item">
+                  <span class="state-indicator state--locked"></span>
+                  <div>
+                    <div class="state-name">锁定</div>
+                    <div class="state-desc">前置未满足，按钮灰显</div>
+                  </div>
+                </div>
+                <div class="state-item">
+                  <span class="state-indicator state--maxed"></span>
+                  <div>
+                    <div class="state-name">满级</div>
+                    <div class="state-desc">已到 maxLevel</div>
+                  </div>
+                </div>
+                <div class="state-item">
+                  <span class="state-indicator state--insufficient"></span>
+                  <div>
+                    <div class="state-name">星核不足</div>
+                    <div class="state-desc">余额低于当前级成本</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 快捷键 -->
+        <section class="panel" id="panel-shortcuts">
+          <h2 class="section-title">键盘快捷键</h2>
+          <p class="section-desc">掌握快捷键，操作效率翻倍</p>
+
+          <div class="shortcuts-grid">
+            <div class="shortcut-group">
+              <h3 class="group-title">能源策略</h3>
+              <div class="shortcut-item">
+                <kbd>1</kbd>
+                <span>切换至采掘优先</span>
+              </div>
+              <div class="shortcut-item">
+                <kbd>2</kbd>
+                <span>切换至均衡运行</span>
+              </div>
+              <div class="shortcut-item">
+                <kbd>3</kbd>
+                <span>切换至精炼优先</span>
+              </div>
+            </div>
+
+            <div class="shortcut-group">
+              <h3 class="group-title">设施操作</h3>
+              <div class="shortcut-item">
+                <kbd>U</kbd>
+                <span>升级或解锁当前选中设施</span>
+              </div>
+            </div>
+
+            <div class="shortcut-group">
+              <h3 class="group-title">面板</h3>
+              <div class="shortcut-item">
+                <kbd>M</kbd>
+                <span>打开存档管理</span>
+              </div>
+              <div class="shortcut-item">
+                <kbd>Esc</kbd>
+                <span>关闭弹窗</span>
+              </div>
+              <div class="shortcut-item">
+                <kbd>~</kbd>
+                <span>打开调试面板</span>
+              </div>
+            </div>
+
+            <div class="shortcut-group">
+              <h3 class="group-title">侧边栏导航</h3>
+              <div class="shortcut-hint">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <line x1="3" y1="6" x2="21" y2="6"/>
+                  <line x1="3" y1="12" x2="21" y2="12"/>
+                  <line x1="3" y1="18" x2="21" y2="18"/>
+                </svg>
+                <span>点击左侧侧边栏按钮打开对应面板（无对应键盘快捷键）</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 侧边栏对照 -->
+          <div class="panel-card mt-l">
+            <div class="card-header">
+              <h3 class="card-title">侧边栏面板对照</h3>
+              <span class="card-tag">NAVIGATION</span>
+            </div>
+            <div class="nav-reference">
+                <div class="nav-ref-item">
+                  <span class="nav-ref-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+                  </span>
+                <div>
+                  <div class="nav-ref-name">矿站 Station</div>
+                  <div class="nav-ref-desc">默认视图，显示主场景与设施</div>
+                </div>
+              </div>
+                <div class="nav-ref-item">
+                  <span class="nav-ref-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                  </span>
+                <div>
+                  <div class="nav-ref-name">反应堆 Reactor</div>
+                  <div class="nav-ref-desc">同位素反应堆面板（需先完成「稀有同位素开采」研究）</div>
+                </div>
+              </div>
+                <div class="nav-ref-item">
+                  <span class="nav-ref-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
+                  </span>
+                <div>
+                  <div class="nav-ref-name">星图 Starmap</div>
+                  <div class="nav-ref-desc">星系地图与矿区解锁进度</div>
+                </div>
+              </div>
+                <div class="nav-ref-item">
+                  <span class="nav-ref-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2zM9 9h6v6H9z"/></svg>
+                  </span>
+                <div>
+                  <div class="nav-ref-name">研究 Research</div>
+                  <div class="nav-ref-desc">四分支科技树（需先解锁研究中心）</div>
+                </div>
+              </div>
+                <div class="nav-ref-item">
+                  <span class="nav-ref-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/></svg>
+                  </span>
+                <div>
+                  <div class="nav-ref-name">成就 Achievements</div>
+                  <div class="nav-ref-desc">30 个成就列表（每 10 点 +1% 全局产量）</div>
+                </div>
+              </div>
+                <div class="nav-ref-item">
+                  <span class="nav-ref-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/></svg>
+                  </span>
+                <div>
+                  <div class="nav-ref-name">转生 Prestige</div>
+                  <div class="nav-ref-desc">转生仪式（重置进度换取星核）</div>
+                </div>
+              </div>
+                <div class="nav-ref-item">
+                  <span class="nav-ref-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                  </span>
+                <div>
+                  <div class="nav-ref-name">商店 Shop</div>
+                  <div class="nav-ref-desc">星核商店（用星核购买永久加成）</div>
+                </div>
+              </div>
+                <div class="nav-ref-item">
+                  <span class="nav-ref-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17,21 17,13 7,13 7,21"/><polyline points="7,3 7,8 15,8"/></svg>
+                  </span>
+                <div>
+                  <div class="nav-ref-name">存档 Save</div>
+                  <div class="nav-ref-desc">存档管理面板</div>
+                </div>
+              </div>
+                <div class="nav-ref-item">
+                  <span class="nav-ref-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></svg>
+                  </span>
+                <div>
+                  <div class="nav-ref-name">帮助 Help</div>
+                  <div class="nav-ref-desc">帮助文档</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 存档管理 -->
+        <section class="panel" id="panel-save">
+          <h2 class="section-title">存档管理</h2>
+          <p class="section-desc">本地 IndexedDB 存档（v9），支持 JSON 导入导出与节奏数据 CSV 导出</p>
+
+          <div class="grid-2">
+            <div class="panel-card">
+              <div class="card-header">
+                <h3 class="card-title">存档特性</h3>
+                <span class="card-tag">STORAGE</span>
+              </div>
+              <ul class="feature-list">
+                <li><span class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17,21 17,13 7,13 7,21"/><polyline points="7,3 7,8 15,8"/></svg></span>IndexedDB 本地存储，无需账号</li>
+                <li><span class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></span>支持 JSON 格式导出存档</li>
+                <li><span class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg></span>支持 JSON 格式导入存档</li>
+                <li><span class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3v18h18M7 14l4-4 4 4 5-6"/></svg></span>节奏数据 CSV 导出</li>
+                <li><span class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg></span>离线收益 8 小时上限</li>
+                <li><span class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="23,4 23,10 17,10"/><polyline points="1,20 1,14 7,14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></span>自动保存，无需手动操作</li>
+              </ul>
+            </div>
+
+            <div class="panel-card">
+              <div class="card-header">
+                <h3 class="card-title">调试面板</h3>
+                <span class="card-tag">DEBUG</span>
+              </div>
+              <div class="debug-list">
+                <div class="debug-item">
+                  <kbd>~</kbd>
+                  <span>打开调试面板</span>
+                </div>
+                <p class="debug-desc">调试面板可用于：修改资源数值、调整设施等级、解锁科技节点、手动触发事件、模拟离线收益等。仅用于开发测试。</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel-card mt-l">
+            <div class="card-header">
+              <h3 class="card-title">快速开始</h3>
+              <span class="card-tag">DEVELOP</span>
+            </div>
+            <div class="code-block">
+<pre><code><span class="code-comment"># 安装依赖</span>
+cd game
+npm install
+
+<span class="code-comment"># 启动开发服务器</span>
+npm run dev        <span class="code-comment"># http://localhost:5173</span>
+
+<span class="code-comment"># 构建生产版本</span>
+npm run build      <span class="code-comment"># 输出到 ../outputs/StarMinerWeb</span>
+npm run preview
+
+<span class="code-comment"># 运行测试</span>
+npm test</code></pre>
+            </div>
+          </div>
+        </section>
+
+        <!-- README 原文 -->
+        <section class="panel" id="panel-readme">
+          <div class="panel-card readme-card">
+            <div class="card-header">
+              <h3 class="card-title">README 原文 · 补充参考</h3>
+              <span class="card-tag">REFERENCE</span>
+            </div>
+            <div class="readme-body">
+
+              <h1 id="readme-title">星际矿站 · Star Miner</h1>
+
+              <p>一款原创科幻放置经营游戏浏览器原型。玩家在 Aurora-1 星球上修复采掘器、运输线与晶体精炼厂，通过自动生产、设施升级、能源策略、科技研究与无人机事件扩展矿站。</p>
+
+              <p>纯前端实现：TypeScript + Vite + Three.js，零外部美术资源（纹理全部程序化生成），无后端、无账号，存档保存在浏览器 IndexedDB。</p>
+
+              <p><strong>Star Miner</strong> is an original sci-fi idle / base-building browser game prototype: restore excavators, maglev transport lines and a crystal refinery on planet Aurora-1, then grow the station through automation, upgrades, energy strategy, research and drone events.</p>
+
+              <h2>特性</h2>
+              <ul>
+                <li>核心生产链：星尘采掘器 → 氦-3 采掘器 → 氘采掘器 → 磁轨运输线 → 晶体精炼厂</li>
+                <li>四档能源策略（采掘优先 / 均衡运行 / 精炼优先 / 聚变模式）+ 能源站与能量储备池</li>
+                <li>资源链扩展：同位素（氘采掘副产物）→ 反物质 → 暗物质（T3/T4 高级资源）</li>
+                <li>研究中心与四分支科技树（T0–T4 共 29 个可研究节点，涵盖采掘 / 能源 / 运输 / 精炼）</li>
+                <li>30 个成就（每 10 点成就 +1% 全局产量）</li>
+                <li>转生系统：消耗资源获取星核，转生后基线重置但永久加成保留；转生仪式提供成就回顾</li>
+                <li>星核商店：15 种永久加成物品（经济 / 生产 / 研究 / 设施 / 转生五类），购买等级跨转生保留</li>
+                <li>无人机事件（A/B 二选一）、太阳风暴、投入型事件</li>
+                <li>离线收益（8 小时上限）、IndexedDB 本地存档（v9）+ JSON 导入导出 + 节奏数据 CSV 导出</li>
+                <li><code>~</code> 调试面板：改资源、等级、解锁、触发事件、模拟离线</li>
+              </ul>
+
+              <h2>技术栈</h2>
+              <p>TypeScript · Vite · Three.js · Vitest</p>
+
+              <h2>快速开始</h2>
+              <pre><code>cd game
+npm install
+npm run dev        <span class="code-comment"># 开发服务器 http://localhost:5173</span>
+
+<span class="code-comment"># 构建生产版本</span>
+npm run build      <span class="code-comment"># 输出到 ../outputs/StarMinerWeb</span>
+npm run preview</code></pre>
+              <p>Windows 用户也可以先执行 <code>npm run build</code>，然后双击仓库根目录的「一键启动.bat」。</p>
+
+              <h2>测试</h2>
+              <pre><code>cd game
+npm test</code></pre>
+
+              <h2>操作说明</h2>
+
+              <h3>键盘快捷键</h3>
+              <ul>
+                <li>1 / 2 / 3：切换能源策略（采掘优先 / 均衡运行 / 精炼优先）</li>
+                <li>U：升级或解锁当前选中设施</li>
+                <li>M：打开存档管理（导出/导入 JSON、导出节奏数据 CSV）</li>
+                <li>Esc：关闭弹窗；<code>~</code>：打开调试面板</li>
+              </ul>
+
+              <h3>侧边栏导航</h3>
+              <p>点击左侧侧边栏按钮打开对应面板（无对应键盘快捷键）：</p>
+              <ul>
+                <li>矿站（station）：默认视图，显示主场景与设施</li>
+                <li>反应堆（reactor）：同位素反应堆面板（需先完成「稀有同位素开采」研究）</li>
+                <li>星图（starmap）：星系地图与矿区解锁进度</li>
+                <li>研究（research）：四分支科技树（需先解锁研究中心）</li>
+                <li>成就（achievements）：30 个成就列表</li>
+                <li>转生（prestige）：转生仪式（重置进度换取星核）</li>
+                <li>商店（shop）：星核商店（用星核购买永久加成）</li>
+                <li>存档（save）：存档管理面板</li>
+                <li>帮助（help）：帮助文档</li>
+              </ul>
+
+              <h3>M2 · 同位素反应堆</h3>
+              <p>消耗同位素的三个入口（全部走 T1-1 ConsumptionEngine 原子事务，墙钟驱动倒计时）：</p>
+
+              <p><strong>Buff 激活</strong>（消耗同位素，对指定资源施加限时倍率，多 buff 乘法叠加，封顶 ×8）：</p>
+              <ul>
+                <li>催化过载：60 同位素，持续 10 分钟，全采掘 ×2 产量</li>
+                <li>晶体共鸣：90 同位素，持续 5 分钟，精炼 ×1.5 产量</li>
+                <li>同位素熔炉：40 同位素，持续 20 分钟，全采掘 ×1.5 产量（长时低增益）</li>
+              </ul>
+
+              <p><strong>深空探索派遣</strong>（消耗同位素，完成时发放奖励；每次仅限 1 路探索进行中）：</p>
+              <ul>
+                <li>近地小行星带：30 同位素，1 分钟，+4 反物质（低风险，稳定）</li>
+                <li>柯伊伯带：80 同位素，3 分钟，+3 暗物质（中风险）</li>
+                <li>蛇夫座深空：150 同位素，6 分钟，+10 反物质（高风险远征）</li>
+              </ul>
+
+              <p><strong>碎片兑换配方</strong>（消耗 A 产出 B，单次事务原子完成）：</p>
+              <ul>
+                <li>同位素催化兑换：25 同位素 → 300 信用点</li>
+                <li>同位素结晶：40 同位素 → 8 晶体</li>
+                <li>反物质湮灭：3 反物质 → 2 暗物质</li>
+              </ul>
+
+              <p><strong>反应堆活跃度</strong> <code>reactorActivity</code>：0（待机）到 1.0（满载），驱动 Three.js 反应堆粒子流强度。buff 与探索越多、活跃度越高，无任何活跃项时归零。</p>
+
+              <h3>M3 · 转生系统</h3>
+              <p>点击侧边栏「转生」打开转生仪式面板。流程：预览 → 确认 → 仪式动画（4.2s）→ 基线重置。</p>
+
+              <p><strong>星核计算公式</strong> <code>computeStardustEarned</code>（纯函数，无最低门槛，任意转生均可触发）：</p>
+              <pre><code>点数 = 晶体/100 + 同位素/20 + 反物质/5 + 暗物质/2 + 星尘/1000
+      + 2 × Σ(设施等级 - 1)  +  5 × 研究项数
+星核 = floor(点数 × 转生增幅器倍率)</code></pre>
+              <p>信用点与能量不计入转生定价；M4 <code>shop-prestige-amplifier</code> 每级 +25% 转生收益，在 floor 之前乘入。</p>
+
+              <p><strong>仪式动画阶段</strong>（4.2s 全屏冻结交互，OrbitControls 禁用 + 全屏遮罩防点击穿透）：</p>
+              <ul>
+                <li>0.0–1.6s 坍缩（collapse）：星体收缩</li>
+                <li>1.6–2.4s 爆发（burst）：核心闪光 + 粒子外冲</li>
+                <li>2.4–4.2s 重生（rebirth）：新星展开、世界淡入</li>
+              </ul>
+
+              <p><strong>转生后状态变化</strong>：</p>
+              <ul>
+                <li>重置：信用点、星尘、晶体、同位素、反物质、暗物质归初始值；所有设施等级回 1 / 锁定；研究清空；成就清空</li>
+                <li>保留（转生层）：星核余额、转生等级、转生历史快照、星核商店购买等级（<code>shopPurchases</code>）</li>
+                <li>保留效果：所有 onBaseline 永久加成 + M2 反应堆活跃 buff 不跨转生（buff 由 ReactorRuntime 内存持有，转生重置时清空）</li>
+                <li>转生仪式提供「成就回顾」面板，展示转生前的基线层摘要与获得的星核明细</li>
+              </ul>
+
+              <h3>M4 · 星核商店</h3>
+              <p>点击侧边栏「商店」打开星核商店面板。</p>
+
+              <p><strong>15 种物品 · 5 大类</strong>：</p>
+              <table>
+                <thead>
+                  <tr><th>类别</th><th>数量</th><th>物品</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>经济</td><td>3</td><td>信用点注入、信用放大器、启动资金</td></tr>
+                  <tr><td>生产</td><td>4</td><td>采掘器调校、矿石增幅器、超频驱动、同位素富集</td></tr>
+                  <tr><td>研究</td><td>3</td><td>研究补贴、研究资助、高级研究授权</td></tr>
+                  <tr><td>设施</td><td>3</td><td>氦-3 开采许可、氘开采许可、等级突破</td></tr>
+                  <tr><td>转生</td><td>2</td><td>星核共鸣、转生增幅器</td></tr>
+                </tbody>
+              </table>
+
+              <p><strong>购买机制</strong>：</p>
+              <ul>
+                <li>成本公式：<code>floor(baseCost × costMultiplier^level)</code>，每级更贵</li>
+                <li>每次购买 +1 级，达到 <code>maxLevel</code> 后满级不可再买</li>
+                <li>走 T0-1 事务原子完成：只读校验 → 扣星核 → 升等级 → onPurchase 即时效果 → commit</li>
+              </ul>
+
+              <p><strong>前置依赖链</strong>：部分物品需先购买前置物品达到指定等级才能解锁（如「氘开采许可」需先买「氦-3 开采许可」达 1 级；「高级研究授权」需先买「研究资助」达 2 级）</p>
+
+              <p><strong>四态购买状态</strong>：</p>
+              <ul>
+                <li>可购买（purchasable）：星核充足 + 前置满足 + 未满级</li>
+                <li>锁定（locked）：前置未满足（按钮灰显）</li>
+                <li>满级（maxed）：已到 <code>maxLevel</code></li>
+                <li>星核不足（insufficient）：余额低于当前级成本</li>
+              </ul>
+
+              <p><strong>跨转生保留</strong>：<code>shopPurchases</code> 存于 prestige 层，转生不重置购买等级。效果叠加：</p>
+              <ul>
+                <li><code>onPurchase</code> 即时效果：购买时立即生效（mutate 事务工作状态），持续到下次转生</li>
+                <li><code>onBaseline</code> 永久效果：转生后基线层叠加，由 <code>applyShopBonuses</code> 在 <code>buildPrestigeBaseline</code> 末尾调用</li>
+                <li>派生乘子（产量、收入、研究折扣等）由 <code>shopBonuses.ts</code> 派生函数读取 <code>prestige.shopPurchases</code>，遵循 <code>achievementProductionMultiplier</code> 先例（不新增 GameState 字段）</li>
+              </ul>
+
+              <h2>文档</h2>
+              <ul>
+                <li>WebGL 原型计划书汇总 — 总体设计与数值</li>
+                <li>v0.4 科技期计划书 — 科技树 / 能源 / 成就</li>
+                <li>v0.3 迭代计划书</li>
+                <li>运输与布局优化计划书</li>
+                <li>同类游戏调研</li>
+              </ul>
+
+              <h2>许可证</h2>
+              <p>MIT © 2026 shunshun0712</p>
+
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- 遮罩层（移动端侧边栏） -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
