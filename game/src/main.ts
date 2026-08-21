@@ -92,6 +92,8 @@ let hud: Hud;
 let panel: Panel;
 let reactorPanel: ReactorPanel;
 let reactorRuntime: ReactorRuntime;
+// 消耗引擎（模块级）：除 ReactorRuntime 外，商店购买 / 转生重置也经其 runSerialized 串行化入队
+let consumptionEngine: ConsumptionEngine;
 
 function byId<T extends HTMLElement = HTMLElement>(id: string): T {
   const el = document.getElementById(id);
@@ -447,7 +449,10 @@ function openPrestigeCeremony(): void {
       // 取消：preview 是纯函数返回值，丢弃即可——零写操作
       onCancel: () => undefined,
       onConfirm: async () => {
-        const result = await executePrestigeReset(txRepo, state, Date.now());
+        // 经 engine.runSerialized 串行化入队，与 consume 互斥避免跨入口事务交错
+        const result = await consumptionEngine.runSerialized(() =>
+          executePrestigeReset(txRepo, state, Date.now()),
+        );
         if (!result.ok) {
           toast(result.error ?? '转生失败', 'error');
           return;
@@ -482,7 +487,10 @@ function openStarcoreShop(): void {
   shopPanel = showStarcoreShop(state, {
     onPurchase: async (itemId) => {
       const item = SHOP_ITEMS[itemId];
-      const r = await purchaseItem(txRepo, state, itemId);
+      // 经 engine.runSerialized 串行化入队，与 consume 互斥避免跨入口事务交错
+      const r = await consumptionEngine.runSerialized(() =>
+        purchaseItem(txRepo, state, itemId),
+      );
       if (r.ok) {
         toast(`购买成功：${item?.name ?? itemId} → Lv.${r.newLevel}（消耗 ${r.cost} 星核）`);
         void saveNow('商店');
@@ -701,7 +709,7 @@ async function bootstrap(): Promise<void> {
   // T1-2 同位素反应堆系统：ConsumptionEngine → ReactorRuntime → ReactorPanel
   // T2-1: 事务后端改用分层存档（基线层 + 转生层），消费引擎与转生重置共用同一持久化路径
   // txRepo 已提升为模块级常量（见文件顶部），此处复用
-  const consumptionEngine = new ConsumptionEngine(txRepo);
+  consumptionEngine = new ConsumptionEngine(txRepo);
   reactorRuntime = new ReactorRuntime(consumptionEngine);
   reactorPanel = new ReactorPanel({
     onActivateBuff: async (defId) => {

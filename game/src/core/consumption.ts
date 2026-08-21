@@ -78,10 +78,10 @@ export class ConsumptionEngine {
   /** 已处理的幂等键集合——相同 key 的消耗请求不重复执行 */
   private processedKeys: Set<string> = new Set();
   /**
-   * 串行化队列——将并发 consume/rollback 调用排队为顺序执行。
+   * 串行化队列——将并发 consume/rollback/runSerialized 调用排队为顺序执行。
    *
    * TransactionalRepository 是单实例共享可变状态机（snapshot/workingState/done 均为实例字段），
-   * 两个 consume 在 await commit 处交错会导致第二个 begin() 的自动清理覆盖第一个事务的快照元数据，
+   * 两个事务在 await commit 处交错会导致第二个 begin() 的自动清理覆盖第一个事务的快照元数据，
    * 引发扣减泄漏（Bug A）和幂等 check-then-act 竞态（Bug B）。
    * 此队列在 engine 层将所有消耗调用串行化，从源头消除交错。
    *
@@ -90,6 +90,22 @@ export class ConsumptionEngine {
   private queue: Promise<unknown> = Promise.resolve();
 
   constructor(private readonly repo: TransactionalRepository<GameState>) {}
+
+  /**
+   * 串行化执行入口——把任意基于 txRepo 的事务函数挂进同一条队列。
+   *
+   * txRepo 除 consume/rollback 外还有直接使用方
+   * （starcoreShop.purchaseItem、prestige.executePrestigeReset 等）。
+   * 这些调用方经此入口包裹后，与 consume/rollback 互斥排队，消除跨入口事务交错。
+   *
+   * fn 的异常会正常传播给调用方；队列本身 catch 兜底不断链，
+   * 确保一次失败不会卡死后续所有排队调用。
+   */
+  async runSerialized<T>(fn: () => Promise<T>): Promise<T> {
+    const run = this.queue.then(fn);
+    this.queue = run.catch(() => undefined);
+    return run;
+  }
 
   /**
    * 执行一次消耗交易：校验 → 扣减 → 产出 → 记录事件。
@@ -101,11 +117,7 @@ export class ConsumptionEngine {
    */
   async consume(state: GameState, request: ConsumptionRequest): Promise<ConsumptionResult> {
     // 串行化：将并发调用排队为顺序执行，避免事务层交错。
-    // catch 不断链——doConsume 自身不会抛（内部已 catch），但队列前驱若被
-    // 外部 reject（理论上不会发生），这里兜底确保后续调用不被卡死。
-    const run = this.queue.then(() => this.doConsume(state, request));
-    this.queue = run.catch(() => undefined);
-    return run;
+    return this.runSerialized(() => this.doConsume(state, request));
   }
 
   /**
@@ -191,9 +203,7 @@ export class ConsumptionEngine {
    */
   async rollback(state: GameState, eventId: string): Promise<ConsumptionResult> {
     // 串行化：与 consume 共享同一队列，避免 rollback 与 consume 交错。
-    const run = this.queue.then(() => this.doRollback(state, eventId));
-    this.queue = run.catch(() => undefined);
-    return run;
+    return this.runSerialized(() => this.doRollback(state, eventId));
   }
 
   /**
