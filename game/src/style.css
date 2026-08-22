@@ -1695,6 +1695,9 @@ button {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 10px;
+  /* 让所有隐式行等高：行高不再各自取本行最高卡片，
+     而是统一拉伸到网格内最高行的高度，保证跨行卡片高度一致 */
+  grid-auto-rows: 1fr;
 }
 
 .shop-empty {
@@ -1753,6 +1756,8 @@ button {
   color: var(--text);
   line-height: 1.5;
   opacity: 0.85;
+  /* 撑满卡片剩余高度，使底部成本/按钮区贴底对齐，避免因描述长短不一导致脚部错位 */
+  flex: 1 1 auto;
 }
 
 .shop-prereq {
