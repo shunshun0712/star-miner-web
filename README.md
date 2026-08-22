@@ -48,11 +48,11 @@
 
 ## 在线体验
 
-> 🚧 在线 Demo 部署中（计划用 GitHub Pages 托管静态构建）。部署完成前，可按[快速开始](#快速开始)本地跑起来（约 2 分钟），或先看下方截图。
+> ▶ 免安装、免登录，浏览器打开即玩（GitHub Pages 托管静态单文件版）。
 
 | 入口 | 状态 |
 |------|------|
-| ▶ 在线 Demo（GitHub Pages） | 部署中，链接待补充 |
+| ▶ 在线 Demo（GitHub Pages） | ✅ [https://shunshun0712.github.io/star-miner-web/](https://shunshun0712.github.io/star-miner-web/) |
 
 ## 截图
 
@@ -283,7 +283,7 @@ npm run test:watch  # 开发态监听
 - [x] M3 转生系统
 - [x] M4 星核商店
 - [ ] 🚧 T3/T4 科技树与数值平衡（节点已定义、资源 schema 已注册，待填充数值，下一版本推进）
-- [ ] 🚧 在线 Demo 部署（GitHub Pages）
+- [x] 在线 Demo 部署（GitHub Pages）
 - [ ] 移动端适配
 - [ ] 贡献指南与工程化配置（lint / format）
 - [ ] Steam 移植评估
