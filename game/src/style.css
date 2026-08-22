@@ -1714,6 +1714,11 @@ button {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  /* 跨 tab 等高：各 tab 是同一 .shop-grid 按 innerHTML 重渲染的，
+     grid-auto-rows:1fr 只统一当前 tab 内的行高，切到描述更短的 tab
+     （设施/转生）时行高会缩矮。取全 tab 最大卡片高 174px 做下限，
+     让短描述 tab 的卡片也撑到等高，描述区 flex:1 吸收多余空间。 */
+  min-height: 174px;
 }
 
 .shop-card.purchased {
