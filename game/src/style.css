@@ -1811,3 +1811,46 @@ button {
 .shop-card.state-maxed .shop-buy-maxed {
   color: var(--muted);
 }
+
+
+
+/* === 自定义滚动条：与深色科幻主题统一 ===
+   覆盖全站所有滚动容器（.modal / #right-panel / 内嵌滚动区等）。
+   WebKit (Chromium/Safari/Edge) 走 ::-webkit-scrollbar 系列；
+   Firefox 走 scrollbar-width + scrollbar-color。
+   滑块用主题色 cyan 的低透明度，轨道透明，与面板底色融合；纤细不抢戏。 */
+* {
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(63, 224, 216, 0.38) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(63, 224, 216, 0.32);
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(63, 224, 216, 0.52);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: rgba(63, 224, 216, 0.68);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
