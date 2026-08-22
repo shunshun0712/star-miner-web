@@ -500,25 +500,195 @@ export function showAchievementsModal(state: GameState): void {
 }
 export function showHelpModal(): void {
   const body = `
-    <h3 class="help-title">资源说明</h3>
-    <div class="help-list">
-      <div class="help-item"><b class="gold">信用点</b><span>货币：出售矿石、事件奖励获得。用于解锁设施、升级设施、研究科技。</span></div>
-      <div class="help-item"><b class="cyan">星尘矿</b><span>基础矿石：采掘器产出。可出售（1 信用点/个），也是精炼晶体的原料。</span></div>
-      <div class="help-item"><b class="purple">晶体</b><span>高级资源：精炼厂把 4 星尘矿（配方优化后 3 个）变成 1 晶体。用于科技研究与 3 级以上升级，也可出售（8 信用点/个）。</span></div>
-      <div class="help-item"><b class="energy-val">能量</b><span>能源站产出，保证设施运转；不足时全设施减产 20%（过载保护后 10%）。研究「能源储备」后，盈余存入储备池（200），可用「释放储备」获得 30 秒全设施 ×1.2 加成。</span></div>
-      <div class="help-item"><b class="cyan">同位素</b><span>稀有资源：采掘时概率获得。当前用于成就收集，后续版本开放合成用途。</span></div>
+    <style>
+      .modal { position: relative; }
+      .help-list .help-item { flex-wrap: wrap; }
+      .help-list details { flex-basis: 100%; margin-top: 6px; }
+      .help-list summary { cursor: pointer; color: var(--muted); font-size: 11px; list-style: none; }
+      .help-list summary::before { content: '▸ '; letter-spacing: .5px; }
+      .help-list details[open] summary { color: var(--cyan); }
+      .help-list details[open] summary::before { content: '▾ '; }
+      .help-list .help-detail { padding: 6px 0 0; font-size: 11px; line-height: 1.7; color: var(--muted); }
+      .help-list .help-detail div { padding-left: 2px; }
+      .help-search { width: 100%; box-sizing: border-box; margin-bottom: 8px; padding: 4px 8px; background: var(--bg,#0a1220); border: 1px solid var(--panel-border,#1d2f45); color: var(--text,#c8d6e5); font-size: 12px; border-radius: 4px; }
+      .help-close-x { position: absolute; top: 8px; right: 12px; cursor: pointer; color: var(--muted); font-size: 18px; line-height: 1; background: none; border: none; padding: 0; }
+      .help-close-x:hover { color: var(--text,#c8d6e5); }
+      .help-quick, .help-milestone, .help-faq { background: rgba(56,217,232,0.04); border-left: 2px solid var(--cyan); padding: 8px 12px; margin: 10px 0; border-radius: 0 4px 4px 0; }
+      .help-quick ol, .help-milestone ol { margin: 4px 0 0; padding-left: 18px; }
+      .help-quick li, .help-milestone li { margin: 4px 0; font-size: 12px; line-height: 1.6; }
+      .help-sec-title { display: flex; align-items: center; gap: 6px; margin: 14px 0 6px; }
+      .help-sec-title .lock { color: var(--muted); font-size: 12px; }
+      .help-version { text-align: center; color: var(--muted); font-size: 11px; padding: 10px 0 2px; border-top: 1px solid var(--panel-border,#1d2f45); margin-top: 14px; }
+      .help-search-hide { display: none !important; }
+    </style>
+    <button class="help-close-x" id="help-close-x" title="关闭">×</button>
+    <input class="help-search" id="help-search" placeholder="🔍 搜索条目（输入关键字实时过滤）…" />
+    <div class="help-quick">
+      <b>快速开始</b> · 新手前三步
+      <ol>
+        <li>点场景里的<b>星尘采掘器</b> → 升级（50 信用点起步），星尘矿越挖越快。</li>
+        <li>攒信用点（出售星尘矿获得）解锁<b>磁轨运输线</b>（600 信用点）→ 再建<b>精炼厂</b>（1000 信用点），把矿炼成晶体。</li>
+        <li>晶体累计到 <b>50</b>，等无人机送来「古代数据核心」，<b>研究中心</b>解锁科技树。</li>
+      </ol>
     </div>
-    <h3 class="help-title">玩法速览</h3>
+    <div class="help-milestone">
+      <b>进度里程碑</b> · 照着走不迷路
+      <ol>
+        <li>🎯 建第一个精炼厂（需先建运输线 600 → 精炼厂 1000 信用点）</li>
+        <li>🎯 累计 50 晶体 → 解锁研究中心，开启科技树</li>
+        <li>🎯 完成「稀有矿同位素」研究（100 晶体，前置矿脉探测 25）→ 解锁反应堆</li>
+        <li>🎯 积累资源后首次转生 → 换星核买永久加成</li>
+      </ol>
+    </div>
+    <div class="help-sec-title"><h3 class="help-title" style="margin:0">基础系统（开局即可用）</h3></div>
     <div class="help-list">
-      <div class="help-item"><b>生产链</b><span>采掘器产出星尘矿 → 运输线转运 → 精炼厂产出晶体 → 出售换信用点或研究科技。</span></div>
-      <div class="help-item"><b>能源策略</b><span>快捷键 1 / 2 / 3 切换采掘优先、均衡、精炼优先；影响产量倍率与能量消耗。</span></div>
-      <div class="help-item"><b>研究中心</b><span>累计产出 50 晶体 + 解锁第二矿区后，等无人机事件出现「发现古代数据核心」即可解锁科技树。</span></div>
-      <div class="help-item"><b>成就</b><span>完成成就获得信用点与晶体，每 10 点成就 +1% 全局产量（永久）。</span></div>
+      <div class="help-item"><b class="gold">信用点</b><span>出售矿石/事件获得的货币，用于解锁与升级。</span>
+        <details open><summary>展开</summary><div class="help-detail">
+          <div>获取：出售星尘矿（1/个）、晶体（8/个），事件奖励 +50。</div>
+          <div>消耗：解锁设施（运输线 600、精炼厂 1000、能源站 1000+15 晶体）、升级设施、研究科技。</div>
+        </div></details></div>
+      <div class="help-item"><b class="cyan">星尘矿</b><span>采掘器产出的基础矿石，可出售或精炼为晶体。</span>
+        <details open><summary>展开</summary><div class="help-detail">
+          <div>获取：采掘器产出（星尘/氦-3/氘 三类，基础 1.2/s）。</div>
+          <div>消耗：精炼为晶体（4:1，优化后 3:1）；出售换信用点（1/个）。</div>
+          <div>容量 2000，不运走会堆满停产。</div>
+        </div></details></div>
+      <div class="help-item"><b class="purple">晶体</b><span>精炼厂产出的高级资源，用于研究与高级升级。</span>
+        <details open><summary>展开</summary><div class="help-detail">
+          <div>获取：精炼厂消耗 4 星尘产 1 晶体（优化后 3:1）。</div>
+          <div>消耗：解锁第二/三矿区（20/100 晶体）、3 级以上设施升级、科技研究（15~100 晶体不等）。</div>
+          <div>售价 8 信用点/个；累计 50 解锁研究中心。</div>
+        </div></details></div>
+      <div class="help-item"><b class="energy-val">能量</b><span>能源站产出，不足时减产；盈余可释放加成。</span>
+        <details open><summary>展开</summary><div class="help-detail">
+          <div>获取：能源站产出（解锁需 1000 信用点 + 15 晶体）。</div>
+          <div>消耗：所有生产设施运行耗能（基础 0.2/s）；不足时全设施 ×0.8（研究过载保护后 ×0.9）。</div>
+          <div>释放加成：研究「能源储备」后，点能源站的「释放储备」按钮（消耗 100 储备能量）→ 30 秒全设施 ×1.2，冷却 60 秒。储备池上限 200。</div>
+        </div></details></div>
+      <div class="help-item"><b>生产链</b><span>采掘器→运输线→精炼厂产晶体→出售/研究；能源站供能。</span>
+        <details><summary>展开</summary><div class="help-detail">
+          <div>不建运输线，星尘矿无法运到精炼厂，就产不出晶体。</div>
+          <div>采掘器：挖星尘矿，堆满会停产，得靠运输线运走。</div>
+          <div>运输线：把矿从采掘器搬到精炼厂，不建矿就堆在采掘器出不来。</div>
+          <div>精炼厂：吃 4 矿吐 1 晶体（优化后 3:1）。</div>
+          <div>出售：点顶栏矿图标直接卖（星尘 1、晶体 8）。研究：在研究中心花晶体点科技。</div>
+          <div>能源站：供能，不足时全设施减速 ×0.8。</div>
+          <div>解锁：运输线 600、精炼厂 1000、第二矿区 1250+20 晶体、第三矿区 3000+100 晶体。</div>
+        </div></details></div>
+      <div class="help-item"><b>能源策略</b><span>快捷键 1/2/3 切 3 档：采掘/均衡/精炼优先。</span>
+        <details><summary>展开</summary><div class="help-detail">
+          <div>采掘优先（1）：前期缺矿/运输线没建满时用。采掘产量 ×1.35，运输/精炼 ×0.9；采掘耗能 ×0.6，运输/精炼耗能 ×1.3。</div>
+          <div>均衡（2）：默认稳定档。全设施产量 ×1、耗能 ×1。</div>
+          <div>精炼优先（3）：矿石积压/急需晶体时用。精炼产量 ×1.35，采掘/运输 ×0.9；精炼耗能 ×0.6，采掘/运输耗能 ×1.3。</div>
+          <div>切错没硬伤，就是把产量与耗能配比拧偏，改回来即可。第四档「聚变」后续版本开放。</div>
+        </div></details></div>
+      <div class="help-item"><b>事件</b><span>每 3–5 分钟触发无人机/投入型/太阳风暴。</span>
+        <details><summary>展开</summary><div class="help-detail">
+          <div>无人机（正面·需操作）：弹窗二选一——选 A 拿 50 信用点；选 B 得 30 秒采掘 ×1.5 加成。未处理会阻塞后续事件触发，尽快选。</div>
+          <div>投入型（正面·需确认）：花 200 信用点换永久采掘 +5%，仅一次；缺钱可先放着不亏（不确认不扣费）。</div>
+          <div>太阳风暴（负面·自动生效）：全设施产量 ×0.8 持续 60 秒；均衡策略可减至 ×0.9。无需操作，结束自动恢复。</div>
+          <div>首次事件 2 分钟后触发，之后每 3–5 分钟一桩。</div>
+        </div></details></div>
+      <div class="help-item"><b>离线收益</b><span>离线自动产出，封顶 8 小时，重进领取。</span>
+        <details><summary>展开</summary><div class="help-detail">
+          <div>离线自动采掘/转运/精炼，产出不封顶；时间封顶 8 小时。</div>
+          <div>离线不触发事件、不留临时增益；重新进入时弹窗领取，不领会继续累计。</div>
+        </div></details></div>
+      <div class="help-item"><b>研究中心</b><span>累计 50 晶体后，无人机事件解锁科技树。</span>
+        <details><summary>展开</summary><div class="help-detail">
+          <div>解锁需累计 50 晶体，再等一次无人机事件（自带「古代数据核心」）；或星核商店「研究补贴」直接解锁。</div>
+          <div>4 支科技树，29 个节点，T0–T4 五级。根节点「基础研究」（15 晶体）解锁后开启四大分支。</div>
+          <div>采掘科技：强化钻头(20)→稀有矿同位素(100)等 8 节点；能源科技：高效涡轮(20)→能源储备(80)等 7 节点；精炼科技：配方优化(30)→晶体品质(100)等 7 节点；运输科技：磁轨加速(20)→无人机配送(100)等 7 节点。</div>
+          <div>每支 T1×2→T2×2→T3×2→T4×1，T3/T4 标注「后续版本开放」，需星核商店「高级研究权限」解锁。节点有前置依赖，按分支树状推进。</div>
+        </div></details></div>
+      <div class="help-item"><b>成就</b><span>完成获奖励，每 10 点 +1% 全局产量（永久）。</span>
+        <details><summary>展开</summary><div class="help-detail">
+          <div>6 类共 30 条：生产（初出茅庐·100 星尘、晶体学徒·100 晶体、第一桶金·1000 信用点、能源先驱·1000 能量…）、建设（设施齐全·全 6 设施、满级王者·任一 5 级、矿区全开…）、科技（启蒙·基础研究、科技学者·10 科技…）、事件（无人机常客·20 次、投资有道…）、探索（同位素收藏家·10 同位素…）、隐藏（深空静默·离线 500 晶体…）。</div>
+          <div>每条给信用点 + 晶体奖励；每 10 条全局产量 +1%（永久）。在成就面板查看全部。</div>
+        </div></details></div>
+    </div>
+    <div class="help-sec-title"><h3 class="help-title" style="margin:0">进阶系统</h3><span class="lock">🔒 需解锁</span></div>
+    <div class="help-list">
+      <div class="help-item"><b class="cyan">同位素</b><span>稀有资源，需研究解锁；可消耗于反应堆。</span>
+        <details><summary>展开</summary><div class="help-detail">
+          <div>获取：研究「稀有矿同位素」后采掘按 5%/秒期望掉落。</div>
+          <div>消耗：反应堆 buff、深空探索派遣、碎片兑换。</div>
+        </div></details></div>
+      <div class="help-item"><b class="cyan">反物质</b><span>T3 稀有资源，反应堆深空探索获得。</span>
+        <details><summary>展开</summary><div class="help-detail">
+          <div>获取：反应堆深空探索（近地小行星带、蛇夫座远征）。</div>
+          <div>消耗：兑换暗物质、预留 T3 科技节点。</div>
+        </div></details></div>
+      <div class="help-item"><b class="cyan">暗物质</b><span>T4 稀有资源，柯伊伯带探索或湮灭兑换。</span>
+        <details><summary>展开</summary><div class="help-detail">
+          <div>获取：柯伊伯带探索；反物质湮灭 3 反物质 → 2 暗物质。</div>
+          <div>消耗：预留 T4 科技节点。</div>
+        </div></details></div>
+      <div class="help-item"><b>同位素反应堆</b><span>需研究解锁。3 类入口：buff / 探索 / 兑换。</span>
+        <details><summary>展开</summary><div class="help-detail">
+          <div>解锁：完成「稀有矿同位素」研究后面板自动出现。</div>
+          <div>buff：催化过载 60→采掘×2/10min；晶体共鸣 90→精炼×1.5/5min；同位素熔炉 40→采掘×1.5/20min（叠加封顶 ×8）。</div>
+          <div>探索：近地 30/1min→4 反物质；柯伊伯带 80/3min→3 暗物质；蛇夫座 150/6min→10 反物质（每次仅 1 路）。</div>
+          <div>兑换：25 同位素→300 信用点；40→8 晶体；3 反物质→2 暗物质。</div>
+        </div></details></div>
+      <div class="help-item"><b>转生系统</b><span>积累后转生换星核买永久加成；资源清零、转生等级保留。</span>
+        <details><summary>展开</summary><div class="help-detail">
+          <div>积累什么：晶体、同位素、反物质、暗物质、星尘、设施等级、研究数都能换星核。</div>
+          <div>星核 = ⌊(晶体/100 + 同位素/20 + 反物质/5 + 暗物质/2 + 星尘/1000 + 2×Σ(设施等级−1) + 5×研究数) × 转生增幅⌋。</div>
+          <div>转生前面板会显示预估星核数与「会失去什么」清单，确认后结算。</div>
+          <div>仪式：基线回顾 → 星核结算 → 确认。</div>
+          <div>重置：资源/设施/研究/成就归零。</div>
+          <div>保留：转生等级（每次 +1，影响下次加成）、星核余额、商店购买记录。</div>
+        </div></details></div>
+      <div class="help-item"><b>星核商店</b><span>用星核买永久加成，5 类 15 件，跨转生保留。</span>
+        <details><summary>展开</summary><div class="help-detail">
+          <div>5 类（经济/生产/研究/设施/转生）共 15 件，用转生攒的星核买。</div>
+          <div>成本：⌊基础成本 × 递增倍率^当前等级⌋，含前置等级与满级限制。</div>
+          <div>代表项：信用放大器 +15%/级；超频驱动 +10%/级；转生增幅器 +25%/级。</div>
+        </div></details></div>
     </div>
     <h3 class="help-title">快捷操作</h3>
     <div class="help-list">
-      <div class="help-item"><b>快捷键</b><span>1/2/3 能源策略 · U 升级/解锁 · M 存档 · Esc 关闭弹窗 · ~ 调试面板</span></div>
-      <div class="help-item"><b>提示</b><span>把鼠标悬停在顶栏资源上可查看说明；点击场景中的设施可切换查看与操作。</span></div>
-    </div>`;
-  openModal('帮助', body, [{ label: '关闭', onClick: (close) => close() }]);
+      <div class="help-item"><b>快捷键</b><span>1/2/3 能源策略 · U 升级 · M 存档 · Esc 关闭弹窗 · ~ 调试</span></div>
+      <div class="help-item"><b>提示</b><span>左侧边栏切面板（设施/星图/反应堆/转生/商店）；点顶栏资源看说明；点场景设施上手操作；设施升级 = 产能变强，解锁 = 开新设施入口；存档自动写浏览器本地（M 手动存），换电脑/清缓存会丢。</span></div>
+    </div>
+    <div class="help-faq">
+      <b>常见问题</b>
+      <div style="margin-top:6px;font-size:12px;line-height:1.7">
+        <div><b>采掘器不工作了？</b> 多半是能量不足——看能源站是否建了、能量够不够，不够就切均衡或建/升能源站。</div>
+        <div><b>能量一直不够怎么办？</b> 优先升能源站等级（最直接），其次研究「高效涡轮」降 10% 能耗，实在紧张切均衡策略；研究「过载保护」可把能源不足惩罚从 −20% 降到 −10%。</div>
+        <div><b>怎么重置游戏？</b> 转生是部分重置（换星核、留永久加成）；想彻底重开需清浏览器站点数据（IndexedDB + localStorage），无游戏内一键重置。</div>
+        <div><b>存档存哪？换电脑还有吗？</b> 存浏览器本地（IndexedDB 为主，localStorage 兜底）。换电脑、清缓存、隐私模式都不保留，需用「存档」面板导出文件迁移。</div>
+        <div><b>离线收益最多攒多久？</b> 封顶 8 小时，超过的不计；回来重新进入会弹窗领取。</div>
+      </div>
+    </div>
+    <div class="help-version">帮助版本 v0.5.0 · 最后更新 2026-08</div>`;
+  openModal(
+    '帮助',
+    body,
+    [{ label: '关闭', onClick: (close) => close() }],
+    () => {
+      const x = document.getElementById('help-close-x');
+      if (x) x.addEventListener('click', () => {
+        document.querySelectorAll('.modal-backdrop').forEach((b) => b.remove());
+        document.dispatchEvent(new CustomEvent('modal:closed'));
+      });
+      const search = document.getElementById('help-search') as HTMLInputElement | null;
+      if (search) {
+        search.addEventListener('input', () => {
+          const q = search.value.trim().toLowerCase();
+          document.querySelectorAll<HTMLDivElement>('.help-modal-body, .help-list, .help-item, .help-quick, .help-milestone, .help-faq, .help-sec-title').forEach((el) => el.classList.remove('help-search-hide'));
+          if (!q) return;
+          document.querySelectorAll<HTMLDivElement>('.help-item').forEach((it) => {
+            const hit = (it.textContent || '').toLowerCase().includes(q);
+            it.classList.toggle('help-search-hide', !hit);
+          });
+          // 隐藏空区块的标题与快速开始/里程碑/FAQ
+          document.querySelectorAll<HTMLDivElement>('.help-sec-title, .help-quick, .help-milestone, .help-faq').forEach((el) => {
+            el.classList.add('help-search-hide');
+          });
+        });
+      }
+    },
+  );
 }
