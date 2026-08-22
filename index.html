@@ -1,0 +1,2852 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>星际矿站 · Star Miner Demo</title>
+<meta name="creative-medium" content="interactive-prototype" />
+<style>
+:root {
+  --bg-deep: #14161a;
+  --bg-panel: #1b1e24;
+  --bg-panel-solid: #15171c;
+  --line: #2a2f38;
+  --text: #e8e9eb;
+  --muted: #9aa1ac;
+  --cyan: #3fe0d8;
+  --purple: #a78bfa;
+  --gold: #c9a227;
+  --ok: #5fbf77;
+  --warn: #e8862e;
+  --danger: #ff6b5e;
+  --radius: 2px;
+  --panel-w: 300px;
+  --nav-w: 64px;
+  --topbar-h: 56px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body, #app { height: 100%; overflow: hidden; }
+body {
+  background: var(--bg-deep);
+  color: var(--text);
+  font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+  font-size: 14px;
+  user-select: none;
+}
+button { font: inherit; cursor: pointer; }
+input { font: inherit; }
+#app {
+  display: grid;
+  grid-template-rows: var(--topbar-h) 1fr;
+  grid-template-columns: var(--nav-w) 1fr var(--panel-w);
+  grid-template-areas:
+    "topbar topbar topbar"
+    "nav scene panel";
+}
+
+/* ===== Topbar ===== */
+#topbar {
+  grid-area: topbar;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 0 16px;
+  background: linear-gradient(180deg, #0b1524, #08101d);
+  border-bottom: 1px solid var(--line);
+  z-index: 30;
+}
+.brand { display: flex; align-items: center; gap: 10px; min-width: 190px; }
+.brand .logo {
+  color: var(--cyan); font-size: 22px;
+  text-shadow: 0 0 12px rgba(56, 217, 232, 0.8);
+}
+.brand h1 { font-size: 16px; letter-spacing: 2px; font-weight: 600; }
+#version-label { color: var(--muted); font-size: 11px; }
+.stats {
+  display: flex; align-items: center; gap: 26px;
+  flex: 1; justify-content: flex-end;
+}
+.stat {
+  display: flex; flex-direction: column; gap: 2px;
+  min-width: 88px;
+}
+.stat-label { color: var(--muted); font-size: 11px; letter-spacing: 1px; }
+.stat-value { font-size: 16px; font-variant-numeric: tabular-nums; font-weight: 600; }
+.gold { color: var(--warn); }
+.cyan { color: var(--cyan); }
+.purple { color: var(--purple); }
+.muted { color: var(--muted); }
+.danger { color: var(--danger); }
+.boost { color: var(--cyan); }
+.save-stat .stat-value { font-size: 13px; }
+.stat-value.flash { animation: status-flash 0.35s ease 3; }
+@keyframes status-flash { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+.top-actions { display: flex; gap: 8px; }
+.speed-btns { display: flex; gap: 4px; }
+.speed-btn {
+  padding: 4px 8px; font-size: 12px;
+  background: transparent; border: 1px solid var(--line);
+  color: var(--muted); border-radius: var(--radius);
+}
+.speed-btn:hover { color: var(--text); border-color: var(--cyan); }
+.speed-btn.active { color: var(--cyan); border-color: rgba(56, 217, 232, 0.5); background: rgba(56, 217, 232, 0.1); }
+
+/* ===== Left Nav ===== */
+#leftnav {
+  grid-area: nav;
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 12px 8px;
+  background: var(--bg-panel-solid);
+  border-right: 1px solid var(--line);
+  z-index: 20;
+  min-height: 0;
+}
+.nav-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 10px 4px;
+  background: transparent; border: 1px solid transparent;
+  border-radius: var(--radius); color: var(--muted);
+  transition: all 0.15s ease;
+}
+.nav-btn:hover { color: var(--text); background: rgba(56, 217, 232, 0.08); }
+.nav-btn.active {
+  color: var(--cyan); border-color: rgba(56, 217, 232, 0.35);
+  background: rgba(56, 217, 232, 0.1);
+}
+.nav-btn.locked { opacity: 0.4; cursor: not-allowed; }
+.nav-icon { font-size: 18px; }
+.nav-text { font-size: 11px; }
+
+/* ===== Scene ===== */
+#scene-host {
+  grid-area: scene;
+  position: relative;
+  background: radial-gradient(ellipse at 50% 35%, #0a1626 0%, #050a14 70%);
+  overflow: hidden;
+  min-height: 0;
+}
+#scene-canvas { display: block; width: 100%; height: 100%; }
+#scene-labels { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+.facility-label {
+  position: absolute; transform: translate(-50%, -100%);
+  text-align: center; padding: 3px 8px 3px 14px;
+  border-radius: var(--radius);
+  background: rgba(20, 22, 26, 0.84);
+  border: 1px solid rgba(232, 233, 235, 0.35);
+  color: var(--text); font-size: 11px;
+  white-space: nowrap; pointer-events: auto; cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.facility-label::before {
+  content: ''; position: absolute; left: 4px; top: 50%;
+  width: 7px; height: 8px; background: var(--cyan); opacity: 0.75;
+  transform: translateY(-50%);
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+}
+.facility-label .label-status { display: block; font-size: 10px; letter-spacing: 1px; }
+.facility-label.selected { border-color: var(--cyan); box-shadow: 0 0 12px rgba(56, 217, 232, 0.35); }
+.facility-label[data-status="LOCKED"] { opacity: 0.6; }
+.facility-label .label-status.ONLINE { color: var(--ok); }
+.facility-label .label-status.LOCKED { color: var(--muted); }
+.facility-label .label-name { font-weight: 600; }
+
+/* ===== Right Panel ===== */
+#right-panel {
+  grid-area: panel;
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 14px;
+  background: var(--bg-panel-solid);
+  border-left: 1px solid var(--line);
+  overflow-y: auto; z-index: 20;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+.panel-card {
+  position: relative; background-color: var(--bg-panel);
+  border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 14px; overflow: hidden;
+  flex-shrink: 0;
+}
+.panel-card::before {
+  content: ''; position: absolute; top: 6px; right: 6px;
+  width: 14px; height: 16px; background: var(--cyan); opacity: 0.28;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  pointer-events: none;
+}
+.panel-card h2 {
+  font-size: 18px; font-weight: 600; letter-spacing: 0.5px;
+  color: var(--text); margin-bottom: 10px;
+}
+.facility-meta {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+}
+.status-badge {
+  padding: 2px 8px; border-radius: var(--radius); font-size: 10px;
+  letter-spacing: 0.8px;
+  background: rgba(88, 224, 161, 0.12);
+  color: var(--ok); border: 1px solid rgba(88, 224, 161, 0.35);
+}
+.status-badge.LOCKED {
+  background: rgba(111, 139, 163, 0.12);
+  color: var(--muted); border-color: rgba(111, 139, 163, 0.35);
+}
+.facility-stats {
+  display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px;
+}
+.row { display: flex; justify-content: space-between; font-variant-numeric: tabular-nums; }
+.row dt { color: var(--muted); }
+.row dd { color: var(--text); }
+.capacity-track {
+  height: 4px; background: var(--line); border-radius: 2px;
+  overflow: hidden; margin: 2px 0;
+}
+.capacity-fill {
+  height: 100%; background: var(--cyan);
+  width: 0%; transition: width 0.15s ease;
+}
+.capacity-fill.full { background: var(--warn); }
+.facility-hint {
+  margin-top: 6px; padding: 6px 10px;
+  background: rgba(232, 134, 46, 0.08);
+  border: 1px solid rgba(232, 134, 46, 0.3);
+  border-radius: 6px; color: var(--warn); font-size: 12px; line-height: 1.5;
+}
+.facility-action { display: flex; align-items: center; gap: 10px; }
+.cost-hint { color: var(--gold); font-size: 12px; font-variant-numeric: tabular-nums; }
+.upgrade-preview {
+  margin-top: 8px; padding: 6px 10px; border-radius: 8px;
+  background: rgba(56, 217, 232, 0.08);
+  border: 1px dashed rgba(56, 217, 232, 0.35);
+  color: var(--cyan); font-size: 12px; line-height: 1.5;
+}
+
+/* ===== Buttons ===== */
+.btn {
+  padding: 8px 12px; border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text); transition: all 0.15s ease;
+}
+.btn:active:not(:disabled) { transform: scale(0.97); }
+.btn:hover:not(:disabled) { border-color: var(--cyan); background: rgba(56, 217, 232, 0.16); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn.primary {
+  border-color: rgba(201, 162, 39, 0.75);
+  background: linear-gradient(180deg, rgba(201, 162, 39, 0.22), rgba(201, 162, 39, 0.07));
+  color: var(--text); font-size: 14px; font-weight: 600;
+  letter-spacing: 0.5px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+}
+.btn.primary:hover:not(:disabled) {
+  border-color: var(--gold);
+  background: linear-gradient(180deg, rgba(201, 162, 39, 0.32), rgba(201, 162, 39, 0.12));
+  box-shadow: 0 0 12px rgba(201, 162, 39, 0.28);
+}
+.btn.ghost { background: transparent; }
+.btn.danger {
+  border-color: rgba(255, 107, 94, 0.6);
+  color: var(--danger);
+}
+.btn.danger:hover:not(:disabled) {
+  background: rgba(255, 107, 94, 0.1);
+  border-color: var(--danger);
+}
+
+/* ===== Energy Card ===== */
+.energy-options {
+  display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px;
+}
+.energy-btn {
+  display: flex; flex-direction: column; gap: 2px;
+  align-items: flex-start; padding: 8px 12px;
+  border-radius: 8px; border: 1px solid var(--line);
+  background: transparent; color: var(--text); text-align: left;
+}
+.energy-btn:hover { border-color: var(--cyan); }
+.energy-btn.active {
+  border-color: var(--cyan);
+  background: rgba(56, 217, 232, 0.14);
+  box-shadow: 0 0 12px rgba(56, 217, 232, 0.2);
+}
+.energy-name { font-weight: 600; }
+.energy-mult { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.energy-effect { margin-bottom: 6px; color: var(--gold); font-size: 12px; font-variant-numeric: tabular-nums; }
+.hint { color: var(--muted); font-size: 11px; }
+
+/* ===== Market Card ===== */
+.sell-row {
+  margin-bottom: 10px; padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+.sell-row:last-of-type { border-bottom: none; }
+.sell-label { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+.sell-controls { display: flex; gap: 6px; }
+.sell-controls input {
+  flex: 1; padding: 6px 8px;
+  background: var(--bg-deep); border: 1px solid var(--line);
+  border-radius: var(--radius); color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.sell-controls input:focus { outline: none; border-color: var(--cyan); }
+.sell-controls .btn { padding: 6px 10px; font-size: 12px; }
+.auto-sell-panel { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.auto-sell-title { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+.auto-sell-row {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 6px; font-size: 12px;
+}
+.auto-sell-label { display: flex; align-items: center; gap: 6px; color: var(--muted); cursor: pointer; }
+.auto-sell-label input[type="checkbox"] { cursor: pointer; }
+.auto-sell-keep { color: var(--muted); display: flex; align-items: center; gap: 4px; }
+.auto-sell-keep input {
+  width: 60px; padding: 3px 6px; font-size: 12px;
+  background: var(--bg-deep); border: 1px solid var(--line);
+  border-radius: var(--radius); color: var(--text);
+  text-align: right;
+}
+
+/* ===== Toasts ===== */
+#toasts {
+  position: fixed; bottom: 18px; left: 50%;
+  transform: translateX(-50%);
+  display: flex; flex-direction: column; gap: 8px;
+  z-index: 80; pointer-events: none;
+}
+.toast {
+  padding: 10px 16px; border-radius: 10px;
+  background: rgba(10, 18, 32, 0.92);
+  border: 1px solid var(--line); color: var(--text);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+  animation: toast-in 0.2s ease;
+}
+.toast.error { border-color: var(--danger); color: var(--danger); }
+.toast.success { border-color: var(--ok); color: var(--ok); }
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== Events ===== */
+#event-host {
+  position: fixed; left: calc(var(--nav-w) + 16px); bottom: 18px;
+  display: flex; flex-direction: column; gap: 10px;
+  z-index: 60; width: 300px; pointer-events: none;
+}
+.event-card {
+  pointer-events: auto;
+  background: var(--bg-panel-solid);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--cyan);
+  border-radius: 10px; padding: 12px;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.5);
+  animation: toast-in 0.2s ease;
+}
+.event-card.storm { border-left-color: var(--warn); }
+.event-card h3 { font-size: 13px; margin-bottom: 6px; letter-spacing: 1px; }
+.event-card p { color: var(--muted); font-size: 12px; line-height: 1.5; margin-bottom: 10px; }
+.event-actions { display: flex; gap: 8px; }
+.event-actions .btn { flex: 1; padding: 6px 8px; font-size: 12px; }
+
+/* ===== Modal ===== */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(2, 5, 10, 0.68);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 90;
+}
+.modal {
+  width: min(640px, 92vw);
+  max-height: 84vh; overflow-y: auto;
+  background: var(--bg-panel-solid);
+  border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; box-shadow: 0 18px 60px rgba(0, 0, 0, 0.6);
+}
+.modal h2 { font-size: 18px; font-weight: 600; margin-bottom: 12px; letter-spacing: 0.5px; }
+.modal h3 { font-size: 14px; font-weight: 600; margin: 14px 0 8px; }
+.modal p { color: var(--text); line-height: 1.6; }
+.modal .muted-text { color: var(--muted); }
+.modal-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+
+/* ===== Research Modal ===== */
+.research-branches { display: flex; flex-direction: column; gap: 16px; }
+.research-branch h3 {
+  font-size: 14px; color: var(--cyan);
+  margin: 0 0 8px 0; letter-spacing: 1px;
+}
+.tech-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+}
+.tech-node {
+  padding: 10px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--bg-panel); cursor: pointer;
+  transition: all 0.15s ease;
+}
+.tech-node:hover:not(.locked):not(.done) { border-color: var(--cyan); background: rgba(56, 217, 232, 0.08); }
+.tech-node.done { border-color: var(--ok); background: rgba(95, 191, 119, 0.1); }
+.tech-node.locked { opacity: 0.5; cursor: not-allowed; }
+.tech-node .tech-name { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+.tech-node.done .tech-name { color: var(--ok); }
+.tech-node .tech-desc { color: var(--muted); font-size: 11px; line-height: 1.4; margin-bottom: 6px; }
+.tech-node .tech-cost { color: var(--purple); font-size: 12px; font-variant-numeric: tabular-nums; }
+.tech-node.done .tech-cost { color: var(--ok); }
+
+/* ===== Achievements Modal ===== */
+.achievement-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.achievement-item {
+  padding: 10px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--bg-panel);
+}
+.achievement-item.done { border-color: var(--gold); background: rgba(201, 162, 39, 0.08); }
+.achievement-item.locked { opacity: 0.6; }
+.achievement-name { font-weight: 600; font-size: 13px; margin-bottom: 2px; }
+.achievement-desc { color: var(--muted); font-size: 11px; line-height: 1.4; }
+.achievement-reward { margin-top: 4px; font-size: 11px; color: var(--gold); }
+.achievement-summary {
+  margin-bottom: 12px; padding: 10px;
+  background: var(--bg-panel); border-radius: 6px; border: 1px solid var(--line);
+  display: flex; justify-content: space-around;
+}
+.achievement-stat { text-align: center; }
+.achievement-stat .num { font-size: 20px; font-weight: 700; color: var(--gold); }
+.achievement-stat .label { font-size: 11px; color: var(--muted); }
+
+/* ===== Prestige Modal ===== */
+.prestige-section { margin-bottom: 16px; }
+.prestige-earn {
+  font-size: 32px; font-weight: 700; color: var(--cyan);
+  text-align: center; margin: 16px 0;
+  text-shadow: 0 0 20px rgba(63, 224, 216, 0.5);
+}
+.prestige-earn-label { text-align: center; color: var(--muted); font-size: 12px; }
+.prestige-breakdown {
+  background: var(--bg-panel); border: 1px solid var(--line);
+  border-radius: 6px; padding: 12px; margin: 12px 0;
+}
+.prestige-breakdown .row { margin-bottom: 4px; font-size: 13px; }
+.prestige-warning {
+  margin-top: 10px; padding: 10px;
+  background: rgba(255, 107, 94, 0.08);
+  border: 1px solid rgba(255, 107, 94, 0.3);
+  border-radius: 6px; color: var(--danger); font-size: 12px;
+}
+.prestige-info {
+  display: flex; justify-content: space-around;
+  margin-bottom: 12px; padding: 10px;
+  background: var(--bg-panel); border-radius: 6px; border: 1px solid var(--line);
+}
+.prestige-info .stat { text-align: center; min-width: auto; }
+.prestige-info .stat .num { font-size: 18px; font-weight: 700; color: var(--cyan); }
+.prestige-info .stat .label { font-size: 11px; color: var(--muted); }
+
+/* ===== Shop Modal ===== */
+.shop-section { margin-bottom: 16px; }
+.shop-section h3 {
+  font-size: 14px; color: var(--purple);
+  margin: 16px 0 8px 0; letter-spacing: 1px;
+}
+.shop-item {
+  padding: 12px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--bg-panel); margin-bottom: 8px;
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+}
+.shop-item-info { flex: 1; }
+.shop-item-name { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+.shop-item-desc { color: var(--muted); font-size: 11px; line-height: 1.4; }
+.shop-item-level { font-size: 11px; color: var(--cyan); margin-top: 4px; }
+.shop-item-action { text-align: right; }
+.shop-item-cost { color: var(--gold); font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+
+/* ===== Help Modal ===== */
+.help-section { margin-bottom: 14px; }
+.help-section h3 { margin-bottom: 6px; }
+.help-section p { color: var(--muted); font-size: 13px; line-height: 1.7; }
+.help-section ul { color: var(--muted); font-size: 13px; line-height: 1.8; padding-left: 20px; }
+
+/* ===== Guide Card ===== */
+.guide-card { border-color: var(--cyan); box-shadow: 0 0 16px rgba(56, 217, 232, 0.2); }
+.guide-card h2 { color: var(--cyan); }
+.guide-steps {
+  list-style: none; margin-bottom: 10px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.guide-step {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; padding: 4px 8px; border-radius: 4px;
+}
+.guide-step .guide-step-mark {
+  width: 20px; height: 20px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600;
+  background: var(--line); color: var(--muted);
+}
+.guide-step.current { color: var(--cyan); background: rgba(56, 217, 232, 0.08); }
+.guide-step.current .guide-step-mark { background: var(--cyan); color: var(--bg-deep); }
+.guide-step.done { color: var(--ok); }
+.guide-step.done .guide-step-mark { background: var(--ok); color: var(--bg-deep); }
+.guide-step.pending { color: var(--muted); }
+.guide-body { color: var(--text); font-size: 13px; line-height: 1.6; margin-bottom: 10px; }
+.guide-footer { display: flex; justify-content: flex-end; }
+.guide-highlight {
+  animation: guide-pulse 1.5s ease-in-out infinite;
+}
+@keyframes guide-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(56, 217, 232, 0.4); }
+  50% { box-shadow: 0 0 0 4px rgba(56, 217, 232, 0.2); }
+}
+
+/* ===== Debug Panel ===== */
+.debug-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  margin-bottom: 12px;
+}
+.debug-field label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+.debug-field input {
+  width: 100%; padding: 6px 8px;
+  background: var(--bg-deep); border: 1px solid var(--line);
+  border-radius: var(--radius); color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.debug-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.debug-section h3 { margin-bottom: 8px; font-size: 13px; color: var(--warn); }
+.debug-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* ===== Scrollbar ===== */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+/* ===== Responsive ===== */
+@media (max-width: 1100px) {
+  :root { --panel-w: 300px; }
+}
+@media (max-width: 900px) {
+  :root { --panel-w: 280px; --nav-w: 56px; }
+  .stat { min-width: 70px; }
+  .nav-text { display: none; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="topbar">
+    <div class="brand">
+      <span class="logo">◆</span>
+      <div class="brand-text">
+        <h1>星际矿站</h1>
+        <span id="version-label">Demo v0.1</span>
+      </div>
+    </div>
+    <div class="stats" id="stats">
+      <div class="stat" data-resource="credits">
+        <span class="stat-label">信用点</span>
+        <span class="stat-value gold" id="stat-credits">0</span>
+      </div>
+      <div class="stat" data-resource="stardust">
+        <span class="stat-label">星尘矿</span>
+        <span class="stat-value cyan" id="stat-stardust">0</span>
+      </div>
+      <div class="stat" data-resource="crystal">
+        <span class="stat-label">晶体</span>
+        <span class="stat-value purple" id="stat-crystal">0</span>
+      </div>
+      <div class="stat" data-resource="energy">
+        <span class="stat-label">能量</span>
+        <span class="stat-value" id="stat-energy">—</span>
+      </div>
+      <div class="stat save-stat">
+        <span class="stat-label">状态</span>
+        <span class="stat-value muted" id="event-status">正常</span>
+      </div>
+      <div class="stat save-stat">
+        <span class="stat-label">存档</span>
+        <span class="stat-value muted" id="save-status">—</span>
+      </div>
+    </div>
+    <div class="top-actions">
+      <div class="speed-btns" title="游戏速度">
+        <button class="speed-btn active" data-speed="1">1×</button>
+        <button class="speed-btn" data-speed="2">2×</button>
+        <button class="speed-btn" data-speed="5">5×</button>
+      </div>
+      <button id="btn-save-modal" class="btn ghost" title="存档管理">存档</button>
+    </div>
+  </header>
+
+  <nav id="leftnav" aria-label="主导航">
+    <button class="nav-btn active" data-page="station" title="矿站">
+      <span class="nav-icon">◈</span>
+      <span class="nav-text">矿站</span>
+    </button>
+    <button class="nav-btn locked" data-page="reactor" title="反应堆（后续开放）">
+      <span class="nav-icon">⚛</span>
+      <span class="nav-text">反应堆</span>
+    </button>
+    <button class="nav-btn locked" data-page="starmap" title="星图（后续开放）">
+      <span class="nav-icon">✧</span>
+      <span class="nav-text">星图</span>
+    </button>
+    <button class="nav-btn" data-page="research" title="研究">
+      <span class="nav-icon">✦</span>
+      <span class="nav-text">研究</span>
+    </button>
+    <button class="nav-btn" data-page="achievements" title="成就">
+      <span class="nav-icon">★</span>
+      <span class="nav-text">成就</span>
+    </button>
+    <button class="nav-btn" data-page="prestige" title="转生仪式">
+      <span class="nav-icon">☄</span>
+      <span class="nav-text">转生</span>
+    </button>
+    <button class="nav-btn" data-page="shop" title="星核商店">
+      <span class="nav-icon">❖</span>
+      <span class="nav-text">商店</span>
+    </button>
+    <button class="nav-btn" data-page="help" title="帮助">
+      <span class="nav-icon">?</span>
+      <span class="nav-text">帮助</span>
+    </button>
+    <button class="nav-btn" data-page="save" title="存档管理">
+      <span class="nav-icon">▤</span>
+      <span class="nav-text">存档</span>
+    </button>
+  </nav>
+
+  <main id="scene-host" aria-label="矿站场景">
+    <canvas id="scene-canvas"></canvas>
+    <div id="scene-labels"></div>
+  </main>
+
+  <aside id="right-panel">
+    <section class="panel-card" id="facility-card">
+      <h2 id="facility-name">星尘采掘器</h2>
+      <div class="facility-meta">
+        <span class="status-badge" id="facility-status">ONLINE</span>
+        <span id="facility-level">Lv.1 / 5</span>
+      </div>
+      <dl class="facility-stats">
+        <div class="row stat-row"><dt>产量</dt><dd class="stat-main" id="facility-rate">1.20 星尘矿/秒</dd></div>
+        <div class="row stat-row"><dt>容量</dt><dd id="facility-capacity">2,000</dd></div>
+        <div class="capacity-track" aria-hidden="true"><div class="capacity-fill" id="capacity-fill"></div></div>
+        <div class="row stat-row" id="bottleneck-row">
+          <dt>瓶颈</dt>
+          <dd id="facility-bottleneck"><span id="bottleneck-text">无</span></dd>
+        </div>
+      </dl>
+      <p id="facility-hint" class="facility-hint" hidden></p>
+      <div class="facility-action">
+        <button id="btn-facility" class="btn primary">升级（U）</button>
+        <span id="facility-cost" class="cost-hint"></span>
+      </div>
+      <p id="upgrade-preview" class="upgrade-preview" hidden></p>
+    </section>
+
+    <section class="panel-card" id="energy-card">
+      <h2>能源策略</h2>
+      <div class="energy-options" id="energy-options">
+        <button class="energy-btn" data-strategy="excavation">
+          <span class="energy-name">采掘优先</span>
+          <span class="energy-mult">采掘 ×1.35 · 运输/精炼 ×0.90</span>
+        </button>
+        <button class="energy-btn active" data-strategy="balanced">
+          <span class="energy-name">均衡运行</span>
+          <span class="energy-mult">全部 ×1.00</span>
+        </button>
+        <button class="energy-btn" data-strategy="refinement">
+          <span class="energy-name">精炼优先</span>
+          <span class="energy-mult">精炼 ×1.35 · 采掘/运输 ×0.90</span>
+        </button>
+      </div>
+      <p class="energy-effect" id="energy-effect"></p>
+      <p class="hint">快捷键 1 / 2 / 3 切换</p>
+    </section>
+
+    <section class="panel-card guide-card" id="guide-card" hidden>
+      <h2 id="guide-title">新手引导</h2>
+      <ol id="guide-steps" class="guide-steps"></ol>
+      <p id="guide-body" class="guide-body"></p>
+      <div class="guide-footer">
+        <button id="btn-guide-close" class="btn">知道了</button>
+      </div>
+    </section>
+
+    <section class="panel-card" id="market-card">
+      <h2>交易</h2>
+      <div class="sell-row">
+        <div class="sell-label">星尘矿（<span id="held-stardust">0</span>）· 1 信用点/个</div>
+        <div class="sell-controls">
+          <input id="qty-stardust" type="number" min="1" step="1" value="10" />
+          <button id="btn-sell-stardust" class="btn">出售</button>
+          <button id="btn-sell-stardust-all" class="btn ghost">全部</button>
+        </div>
+      </div>
+      <div class="sell-row">
+        <div class="sell-label">晶体（<span id="held-crystal">0</span>）· <span id="crystal-price-label">8</span> 信用点/个</div>
+        <div class="sell-controls">
+          <input id="qty-crystal" type="number" min="1" step="1" value="10" />
+          <button id="btn-sell-crystal" class="btn">出售</button>
+          <button id="btn-sell-crystal-all" class="btn ghost">全部</button>
+        </div>
+      </div>
+      <div class="auto-sell-panel">
+        <h3 class="auto-sell-title">自动出售</h3>
+        <div class="auto-sell-row">
+          <label class="auto-sell-label"><input type="checkbox" id="auto-sell-stardust" /> 星尘矿</label>
+          <label class="auto-sell-keep">保留 <input id="auto-sell-keep" type="number" min="0" step="1" value="50" /> 个</label>
+        </div>
+        <div class="auto-sell-row">
+          <label class="auto-sell-label"><input type="checkbox" id="auto-sell-crystal" /> 晶体</label>
+          <label class="auto-sell-keep">保留 <input id="auto-sell-crystal-keep" type="number" min="0" step="1" value="10" /> 个</label>
+        </div>
+      </div>
+    </section>
+  </aside>
+
+  <div id="event-host"></div>
+  <div id="toasts" aria-live="polite"></div>
+  <div id="modal-root"></div>
+</div>
+
+<script>
+// ============================================================
+//  星际矿站 Demo — 单文件可玩版本
+//  基于正式版 star-miner-web v0.5 源码移植
+// ============================================================
+
+'use strict';
+
+// ===== Config =====
+const GAME_VERSION = 'v0.5 Demo';
+const SAVE_VERSION = 9;
+const MAX_LEVEL = 5;
+const OFFLINE_CAP_MS = 8 * 3600 * 1000;
+const CRYSTAL_RECIPE_STARDUST = 4;
+const CRYSTAL_PRICE = 8;
+const STARDUST_PRICE = 1;
+const UPGRADE_COST_GROWTH = 1.7;
+const SPEED_GROWTH_PER_LEVEL = 0.2;
+const CAPACITY_GROWTH_PER_LEVEL = 0.25;
+const CRYSTAL_UPGRADE_THRESHOLD = 3;
+const EVENT_FIRST_AFTER_MS = 2 * 60 * 1000;
+const EVENT_INTERVAL_MIN_MS = 3 * 60 * 1000;
+const EVENT_INTERVAL_MAX_MS = 5 * 60 * 1000;
+const DRONE_BOOST_MS = 30 * 1000;
+const DRONE_BOOST_MULT = 1.5;
+const DRONE_A_CREDITS = 50;
+const STORM_MS = 60 * 1000;
+const STORM_MULT = 0.8;
+const STORM_BALANCED_MULT = 0.9;
+const INVEST_COST = 200;
+const INVEST_BOOST = 0.05;
+const DEFAULT_STARDUST_KEEP = 50;
+const DEFAULT_CRYSTAL_KEEP = 10;
+const RESEARCH_CENTER_UNLOCK_CRYSTALS = 50;
+const ENERGY_STATION_UNLOCK_CREDITS = 1000;
+const ENERGY_STATION_UNLOCK_CRYSTALS = 15;
+const ENERGY_BASE_CONSUMPTION = 0.2;
+const ENERGY_RESERVE_CAP = 200;
+const ENERGY_RELEASE_COST = 100;
+const ENERGY_RELEASE_MS = 30 * 1000;
+const ENERGY_RELEASE_COOLDOWN_MS = 60 * 1000;
+const ENERGY_RELEASE_MULT = 1.2;
+const ENERGY_DEFICIT_MULT = 0.8;
+const ENERGY_DEFICIT_PROTECTED_MULT = 0.9;
+const DRILL_MULT = 1.15;
+const VEIN_MULT = 1.1;
+const CATALYSIS_MULT = 1.2;
+const RAIL_MULT = 1.3;
+const PARALLEL_RAILS_MULT = 2;
+const SOLAR_BALANCED_MULT = 1.05;
+const TURBINE_MULT = 0.9;
+const CRYSTAL_QUALITY_MULT = 1.25;
+const ISOTOPE_CHANCE = 0.05;
+const RECIPE_3 = 3;
+const ACHIEVEMENT_POINTS_PER_MULT = 10;
+const ACHIEVEMENT_MULT_STEP = 0.01;
+
+const FACILITY_ORDER = ['excavator', 'he3Excavator', 'deuteriumExcavator', 'transport', 'refinery', 'energyStation'];
+const FACILITIES = {
+  excavator: { id: 'excavator', name: '星尘采掘器', baseSpeed: 1.2, baseCapacity: 2000, baseUpgradeCost: 50, baseCrystalUpgradeCost: 4, unlockCost: 0, unlockCrystalCost: 0, produces: 'stardust', rateUnit: '星尘矿/秒' },
+  he3Excavator: { id: 'he3Excavator', name: '氦-3 采掘器', baseSpeed: 1.2, baseCapacity: 2000, baseUpgradeCost: 50, baseCrystalUpgradeCost: 4, unlockCost: 1250, unlockCrystalCost: 20, produces: 'stardust', rateUnit: '星尘矿/秒' },
+  deuteriumExcavator: { id: 'deuteriumExcavator', name: '氘采掘器', baseSpeed: 1.4, baseCapacity: 2500, baseUpgradeCost: 80, baseCrystalUpgradeCost: 6, unlockCost: 3000, unlockCrystalCost: 100, produces: 'stardust', rateUnit: '星尘矿/秒' },
+  transport: { id: 'transport', name: '磁轨运输线', baseSpeed: 1.0, baseCapacity: 2000, baseUpgradeCost: 120, baseCrystalUpgradeCost: 6, unlockCost: 600, unlockCrystalCost: 0, produces: 'stardust', rateUnit: '星尘矿/秒' },
+  refinery: { id: 'refinery', name: '晶体精炼厂', baseSpeed: 0.25, baseCapacity: 1000, baseUpgradeCost: 300, baseCrystalUpgradeCost: 10, unlockCost: 1000, unlockCrystalCost: 0, produces: 'crystal', consumes: { resource: 'stardust', amountPerOutput: 4 }, rateUnit: '晶体/秒' },
+  energyStation: { id: 'energyStation', name: '能源站', baseSpeed: 1.0, baseCapacity: 0, baseUpgradeCost: 200, baseCrystalUpgradeCost: 8, unlockCost: ENERGY_STATION_UNLOCK_CREDITS, unlockCrystalCost: ENERGY_STATION_UNLOCK_CRYSTALS, produces: 'energy', rateUnit: '能量/秒' },
+};
+
+const ENERGY_STRATEGIES = {
+  excavation: { excavator: 1.35, he3Excavator: 1.35, deuteriumExcavator: 1.35, transport: 0.9, refinery: 0.9, energyStation: 1 },
+  balanced: { excavator: 1, he3Excavator: 1, deuteriumExcavator: 1, transport: 1, refinery: 1, energyStation: 1 },
+  refinement: { excavator: 0.9, he3Excavator: 0.9, deuteriumExcavator: 0.9, transport: 0.9, refinery: 1.35, energyStation: 1 },
+};
+const ENERGY_CONSUMPTION_MULTS = {
+  excavation: { excavator: 0.6, he3Excavator: 0.6, deuteriumExcavator: 0.6, transport: 1.3, refinery: 1.3, energyStation: 0 },
+  balanced: { excavator: 1, he3Excavator: 1, deuteriumExcavator: 1, transport: 1, refinery: 1, energyStation: 0 },
+  refinement: { excavator: 1.3, he3Excavator: 1.3, deuteriumExcavator: 1.3, transport: 1.3, refinery: 0.6, energyStation: 0 },
+};
+const ENERGY_CONSUMERS = ['excavator', 'he3Excavator', 'deuteriumExcavator', 'transport', 'refinery'];
+const ENERGY_STRATEGY_LABELS = { excavation: '采掘优先', balanced: '均衡运行', refinement: '精炼优先' };
+
+const MINING_IDS = ['excavator', 'he3Excavator', 'deuteriumExcavator'];
+function isMining(id) { return MINING_IDS.includes(id); }
+
+// ===== Tech Nodes (Demo: T0-T2, 12 core nodes) =====
+const TECH_NODES = [
+  { id: 'basicResearch', branch: 'excavation', tier: 0, name: '基础研究', description: '建立研究中心，解锁四大科技分支', cost: 15, requires: [] },
+  { id: 'drillHardening', branch: 'excavation', tier: 1, name: '强化钻头', description: '所有采掘器 +15% 产量', cost: 20, requires: ['basicResearch'] },
+  { id: 'veinProspecting', branch: 'excavation', tier: 1, name: '矿脉探测', description: '采掘 +10% 产量', cost: 25, requires: ['basicResearch'] },
+  { id: 'rareIsotopeMining', branch: 'excavation', tier: 2, name: '稀有矿同位素', description: '采掘有 5% 概率获得同位素', cost: 100, requires: ['veinProspecting'] },
+  { id: 'highEfficiencyTurbine', branch: 'energy', tier: 1, name: '高效涡轮', description: '全设施能源消耗 -10%', cost: 20, requires: ['basicResearch'] },
+  { id: 'solarPanels', branch: 'energy', tier: 1, name: '太阳能板', description: '均衡策略下全设施 +5%', cost: 25, requires: ['basicResearch'] },
+  { id: 'energyReserve', branch: 'energy', tier: 2, name: '能源储备', description: '解锁能量储备池（200 容量）与释放储备', cost: 80, requires: ['highEfficiencyTurbine'] },
+  { id: 'overloadProtection', branch: 'energy', tier: 2, name: '过载保护', description: '能源不足惩罚由 -20% 降至 -10%', cost: 100, requires: ['solarPanels'] },
+  { id: 'efficientCatalysis', branch: 'refinement', tier: 1, name: '高效催化', description: '精炼速度 +20%', cost: 20, requires: ['basicResearch'] },
+  { id: 'recipeOptimization', branch: 'refinement', tier: 1, name: '配方优化', description: '精炼配方 4:1 → 3:1', cost: 30, requires: ['basicResearch'] },
+  { id: 'crystalQuality', branch: 'refinement', tier: 2, name: '晶体品质', description: '晶体售价 +25%', cost: 100, requires: ['recipeOptimization'] },
+  { id: 'railAcceleration', branch: 'transport', tier: 1, name: '磁轨加速', description: '运输速度 +30%', cost: 20, requires: ['basicResearch'] },
+  { id: 'cargoExpansion', branch: 'transport', tier: 1, name: '扩容货舱', description: '运输容量 +50%', cost: 25, requires: ['basicResearch'] },
+  { id: 'parallelRails', branch: 'transport', tier: 2, name: '多轨并行', description: '运输速度 ×2', cost: 120, requires: ['railAcceleration'] },
+];
+const TECH_BY_ID = {};
+for (const n of TECH_NODES) TECH_BY_ID[n.id] = n;
+const TECH_BRANCH_LABELS = { excavation: '采掘科技', energy: '能源科技', refinement: '精炼科技', transport: '运输科技' };
+
+// ===== Achievements (Demo: 10 core) =====
+const ACHIEVEMENTS = [
+  { id: 'p100Stardust', category: 'production', name: '初出茅庐', description: '累计产出 100 星尘矿', rewardCredits: 50, rewardCrystals: 1 },
+  { id: 'p1000Stardust', category: 'production', name: '星尘大户', description: '累计产出 1000 星尘矿', rewardCredits: 150, rewardCrystals: 3 },
+  { id: 'p100Crystal', category: 'production', name: '晶体学徒', description: '累计产出 100 晶体', rewardCredits: 300, rewardCrystals: 5 },
+  { id: 'c1000Credits', category: 'production', name: '第一桶金', description: '累计获得 1000 信用点', rewardCredits: 100, rewardCrystals: 2 },
+  { id: 'allFacilities', category: 'construction', name: '设施齐全', description: '解锁全部 6 个设施', rewardCredits: 400, rewardCrystals: 6 },
+  { id: 'allLevel3', category: 'construction', name: '全员三级', description: '所有已解锁设施达到 3 级', rewardCredits: 500, rewardCrystals: 8 },
+  { id: 'anyLevel5', category: 'construction', name: '满级王者', description: '任一设施达到 5 级', rewardCredits: 600, rewardCrystals: 10 },
+  { id: 'tBasic', category: 'tech', name: '启蒙', description: '完成基础研究', rewardCredits: 100, rewardCrystals: 2 },
+  { id: 't5', category: 'tech', name: '科技新星', description: '累计研究 5 个科技', rewardCredits: 400, rewardCrystals: 6 },
+  { id: 'ev10', category: 'event', name: '事件初体验', description: '累计触发 10 次事件', rewardCredits: 150, rewardCrystals: 3 },
+];
+const ACHIEVEMENT_BY_ID = {};
+for (const a of ACHIEVEMENTS) ACHIEVEMENT_BY_ID[a.id] = a;
+
+// ===== Star Core Shop (Demo simplified) =====
+const SHOP_ITEMS = {
+  'shop-credit-amplifier': { id: 'shop-credit-amplifier', name: '信用放大器', description: '出售资源获得的信用点每级 +15%', category: 'economy', baseCost: 6, costMultiplier: 1.6, maxLevel: 3, prerequisites: [] },
+  'shop-excavator-tuning': { id: 'shop-excavator-tuning', name: '采掘器调校', description: '每次转生后采掘器额外 +1 级', category: 'production', baseCost: 5, costMultiplier: 1.5, maxLevel: 3, prerequisites: [] },
+  'shop-ore-booster': { id: 'shop-ore-booster', name: '矿石增幅器', description: '所有采掘器矿石产量每级 +20%', category: 'production', baseCost: 7, costMultiplier: 1.6, maxLevel: 3, prerequisites: [] },
+  'shop-overdrive': { id: 'shop-overdrive', name: '超频驱动', description: '所有设施产出速率每级 +10%', category: 'production', baseCost: 12, costMultiplier: 1.8, maxLevel: 2, prerequisites: [] },
+  'shop-starting-fund': { id: 'shop-starting-fund', name: '启动资金', description: '每次转生后初始信用点 +300×等级', category: 'economy', baseCost: 8, costMultiplier: 1.7, maxLevel: 3, prerequisites: [] },
+  'shop-prestige-amplifier': { id: 'shop-prestige-amplifier', name: '转生增幅器', description: '转生结算获得的星核每级 +25%', category: 'prestige', baseCost: 25, costMultiplier: 2.5, maxLevel: 2, prerequisites: [] },
+};
+const SHOP_CATEGORY_LABELS = { economy: '经济类', production: '生产类', prestige: '转生类' };
+
+function getItemLevel(state, itemId) {
+  return state.prestige.shopPurchases[itemId] || 0;
+}
+function getItemCost(state, itemId) {
+  const item = SHOP_ITEMS[itemId];
+  const level = getItemLevel(state, itemId);
+  if (level >= item.maxLevel) return Infinity;
+  return Math.floor(item.baseCost * Math.pow(item.costMultiplier, level));
+}
+function canPurchaseItem(state, itemId) {
+  const item = SHOP_ITEMS[itemId];
+  const level = getItemLevel(state, itemId);
+  if (level >= item.maxLevel) return { ok: false, reason: '已满级' };
+  for (const pre of item.prerequisites) {
+    if (getItemLevel(state, pre.itemId) < pre.level) return { ok: false, reason: '前置未达成' };
+  }
+  const cost = getItemCost(state, itemId);
+  if (state.prestige.stardust < cost) return { ok: false, reason: `星核不足（需 ${cost}）` };
+  return { ok: true };
+}
+function purchaseItem(state, itemId) {
+  const check = canPurchaseItem(state, itemId);
+  if (!check.ok) return check;
+  const cost = getItemCost(state, itemId);
+  state.prestige.stardust -= cost;
+  state.prestige.shopPurchases[itemId] = (state.prestige.shopPurchases[itemId] || 0) + 1;
+  // Apply onBaseline effects immediately
+  const level = getItemLevel(state, itemId);
+  if (itemId === 'shop-excavator-tuning') {
+    state.facilities.excavator.level = Math.min(MAX_LEVEL, state.facilities.excavator.level + 1);
+  } else if (itemId === 'shop-starting-fund') {
+    state.credits += 300;
+  }
+  return { ok: true };
+}
+function shopOreProductionMultiplier(state) { return 1 + 0.2 * getItemLevel(state, 'shop-ore-booster'); }
+function shopFacilityRateMultiplier(state) { return 1 + 0.1 * getItemLevel(state, 'shop-overdrive'); }
+function shopCreditsIncomeMultiplier(state) { return 1 + 0.15 * getItemLevel(state, 'shop-credit-amplifier'); }
+function shopPrestigeGainMultiplier(state) { return 1 + 0.25 * getItemLevel(state, 'shop-prestige-amplifier'); }
+
+// ===== Formatting =====
+function formatNumber(n) {
+  if (!Number.isFinite(n)) return '∞';
+  const abs = Math.abs(n);
+  if (abs >= 1e9) return trim(n / 1e9) + 'B';
+  if (abs >= 1e6) return trim(n / 1e6) + 'M';
+  if (abs >= 1e3) return trim(n / 1e3) + 'K';
+  if (Number.isInteger(n)) return n.toLocaleString('en-US');
+  return n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+}
+function trim(v) { return v.toFixed(2).replace(/\.?0+$/, ''); }
+function formatRate(n, unit) { return n.toFixed(2) + ' ' + unit; }
+function formatDuration(ms) {
+  const seconds = Math.floor(ms / 1000);
+  if (seconds < 60) return seconds + ' 秒';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return minutes + ' 分钟';
+  const hours = Math.floor(minutes / 60);
+  const remMinutes = minutes % 60;
+  if (hours < 24) return remMinutes > 0 ? hours + ' 小时 ' + remMinutes + ' 分' : hours + ' 小时';
+  const days = Math.floor(hours / 24);
+  const remHours = hours % 24;
+  if (remHours > 0) return remMinutes > 0 ? days + ' 天 ' + remHours + ' 小时 ' + remMinutes + ' 分' : days + ' 天 ' + remHours + ' 小时';
+  return days + ' 天';
+}
+
+// ===== State =====
+function createNewGame(now) {
+  const facilities = {};
+  for (const id of FACILITY_ORDER) {
+    facilities[id] = { level: 1, unlocked: id === 'excavator' };
+  }
+  return {
+    version: SAVE_VERSION,
+    credits: 100,
+    stardust: 0,
+    refineryBuffer: 0,
+    crystal: 0,
+    energy: 0,
+    isotope: 0,
+    facilities,
+    energyStrategy: 'balanced',
+    eventState: {
+      pendingEvent: null,
+      nextEventAt: now + EVENT_FIRST_AFTER_MS,
+      droneBoostUntil: 0,
+      solarStormUntil: 0,
+      investUsed: false,
+    },
+    settings: {
+      autoSellStardust: false,
+      stardustKeepAmount: DEFAULT_STARDUST_KEEP,
+      autoSellCrystal: false,
+      crystalKeepAmount: DEFAULT_CRYSTAL_KEEP,
+    },
+    researchCenterUnlocked: false,
+    research: [],
+    stats: {
+      totalStardustProduced: 0,
+      totalCrystalProduced: 0,
+      totalCreditsEarned: 0,
+      totalEnergyProduced: 0,
+      totalIsotopeProduced: 0,
+      eventsTriggered: 0,
+      droneEventsHandled: 0,
+      solarStormsExperienced: 0,
+      investmentsMade: 0,
+      upgradesPerformed: 0,
+      researchesCompleted: 0,
+      lastOfflineCrystalGain: 0,
+    },
+    achievements: [],
+    energyReleaseUntil: 0,
+    energyReleaseCooldownUntil: 0,
+    createdAt: now,
+    lastSavedAt: now,
+    prestige: {
+      unlocked: [],
+      stardust: 0,
+      prestigeLevel: 0,
+      history: [],
+      shopPurchases: {},
+    },
+  };
+}
+
+// ===== Research =====
+function hasResearch(state, id) { return state.research.includes(id); }
+function researchCost(state, id) {
+  const node = TECH_BY_ID[id];
+  if (!node) return Infinity;
+  return node.cost;
+}
+function canResearch(state, id) {
+  const node = TECH_BY_ID[id];
+  if (!node) return { ok: false, reason: '未知科技' };
+  if (hasResearch(state, id)) return { ok: false, reason: '已研究' };
+  for (const req of node.requires) {
+    if (!hasResearch(state, req)) return { ok: false, reason: '需先研究「' + (TECH_BY_ID[req]?.name || req) + '」' };
+  }
+  const cost = researchCost(state, id);
+  if (state.crystal < cost) return { ok: false, reason: '晶体不足（需 ' + cost + '）' };
+  return { ok: true };
+}
+function researchTech(state, id) {
+  const check = canResearch(state, id);
+  if (!check.ok) return check;
+  state.crystal -= researchCost(state, id);
+  state.research.push(id);
+  state.stats.researchesCompleted += 1;
+  return { ok: true };
+}
+
+// ===== Production =====
+function effectiveRecipe(state) {
+  return hasResearch(state, 'recipeOptimization') ? RECIPE_3 : CRYSTAL_RECIPE_STARDUST;
+}
+
+function activeModifier(state, id, now) {
+  let m = 1;
+  if (state.eventState.investUsed && id === 'excavator') m *= 1 + INVEST_BOOST;
+  if (now < state.eventState.droneBoostUntil) m *= DRONE_BOOST_MULT;
+  if (now < state.eventState.solarStormUntil) {
+    m *= state.energyStrategy === 'balanced' ? STORM_BALANCED_MULT : STORM_MULT;
+  }
+  return m;
+}
+
+function achievementProductionMultiplier(state) {
+  return 1 + Math.floor(state.achievements.length / ACHIEVEMENT_POINTS_PER_MULT) * ACHIEVEMENT_MULT_STEP;
+}
+
+function rawRate(state, id, levelOverride, now) {
+  now = now || Date.now();
+  const f = state.facilities[id];
+  if (!f.unlocked) return 0;
+  const cfg = FACILITIES[id];
+  const mult = ENERGY_STRATEGIES[state.energyStrategy][id];
+  let level = levelOverride !== undefined ? levelOverride : f.level;
+  let m = 1;
+  if (isMining(id)) {
+    if (hasResearch(state, 'drillHardening')) m *= DRILL_MULT;
+    if (hasResearch(state, 'veinProspecting')) m *= VEIN_MULT;
+  }
+  if (id === 'refinery' && hasResearch(state, 'efficientCatalysis')) m *= CATALYSIS_MULT;
+  if (id === 'transport') {
+    if (hasResearch(state, 'railAcceleration')) m *= RAIL_MULT;
+    if (hasResearch(state, 'parallelRails')) m *= PARALLEL_RAILS_MULT;
+  }
+  if (hasResearch(state, 'solarPanels') && state.energyStrategy === 'balanced') m *= SOLAR_BALANCED_MULT;
+  if (state.energyReleaseUntil > now) m *= ENERGY_RELEASE_MULT;
+  m *= achievementProductionMultiplier(state);
+  m *= shopFacilityRateMultiplier(state);
+  if (isMining(id)) m *= shopOreProductionMultiplier(state);
+  return cfg.baseSpeed * mult * (1 + SPEED_GROWTH_PER_LEVEL * (level - 1)) * activeModifier(state, id, now) * m;
+}
+function rateFor(state, id, now) { return rawRate(state, id, undefined, now); }
+
+function capacityFor(state, id) {
+  const f = state.facilities[id];
+  if (!f.unlocked) return 0;
+  const cfg = FACILITIES[id];
+  let cap = cfg.baseCapacity * (1 + CAPACITY_GROWTH_PER_LEVEL * (f.level - 1));
+  if (id === 'transport' && hasResearch(state, 'cargoExpansion')) cap *= 1.5;
+  return cap;
+}
+
+function getRates(state, now) {
+  now = now || Date.now();
+  return {
+    excavator: rateFor(state, 'excavator', now),
+    he3Excavator: rateFor(state, 'he3Excavator', now),
+    deuteriumExcavator: rateFor(state, 'deuteriumExcavator', now),
+    transport: rateFor(state, 'transport', now),
+    refinery: rateFor(state, 'refinery', now),
+    energyStation: rateFor(state, 'energyStation', now),
+  };
+}
+
+function energyConsumptionPerSecond(state) {
+  const turb = hasResearch(state, 'highEfficiencyTurbine') ? TURBINE_MULT : 1;
+  const mults = ENERGY_CONSUMPTION_MULTS[state.energyStrategy];
+  let total = 0;
+  for (const id of ENERGY_CONSUMERS) {
+    if (state.facilities[id].unlocked) total += ENERGY_BASE_CONSUMPTION * mults[id];
+  }
+  return total * turb;
+}
+
+function computeBottlenecks(state, rates) {
+  const bottlenecks = [];
+  if (!state.facilities.excavator.unlocked) return bottlenecks;
+  const upstream = rates.excavator + rates.he3Excavator + rates.deuteriumExcavator;
+  if (state.facilities.transport.unlocked && upstream > rates.transport) {
+    const mining = [];
+    if (state.facilities.excavator.unlocked) mining.push(['excavator', rates.excavator]);
+    if (state.facilities.he3Excavator.unlocked) mining.push(['he3Excavator', rates.he3Excavator]);
+    if (state.facilities.deuteriumExcavator.unlocked) mining.push(['deuteriumExcavator', rates.deuteriumExcavator]);
+    if (mining.length > 0) {
+      let slowest = mining[0][0];
+      let slowestRate = mining[0][1];
+      for (let i = 1; i < mining.length; i++) {
+        if (mining[i][1] < slowestRate) { slowestRate = mining[i][1]; slowest = mining[i][0]; }
+      }
+      bottlenecks.push(slowest);
+    }
+  }
+  if (state.facilities.refinery.unlocked) {
+    const refineryStardustNeed = rates.refinery * effectiveRecipe(state);
+    if (state.facilities.transport.unlocked && rates.transport > refineryStardustNeed) bottlenecks.push('transport');
+  }
+  return bottlenecks;
+}
+
+function tickProduction(state, deltaMs, opts) {
+  opts = opts || {};
+  const dt = deltaMs / 1000;
+  const now = opts.now || Date.now();
+  const rates = getRates(state, now);
+  const unbounded = opts.unboundedCapacity === true;
+
+  // Energy balance
+  const energyProduced = rates.energyStation * dt;
+  if (rates.energyStation > 0) state.stats.totalEnergyProduced += energyProduced;
+  let deficitFactor = 1;
+  if (state.facilities.energyStation.unlocked) {
+    const reserveEnabled = hasResearch(state, 'energyReserve');
+    const net = rates.energyStation * dt - energyConsumptionPerSecond(state) * dt;
+    let shortfall = 0;
+    if (reserveEnabled) {
+      const before = state.energy;
+      state.energy = Math.max(0, Math.min(ENERGY_RESERVE_CAP, before + net));
+      if (net < 0) shortfall = Math.max(0, -net - before);
+    } else if (net < 0) {
+      shortfall = -net;
+    }
+    if (shortfall > 1e-9) {
+      deficitFactor = hasResearch(state, 'overloadProtection') ? ENERGY_DEFICIT_PROTECTED_MULT : ENERGY_DEFICIT_MULT;
+    }
+  }
+  const eff = function(r) { return r * deficitFactor; };
+
+  // Stardust production
+  const stardustCap = capacityFor(state, 'excavator') + capacityFor(state, 'he3Excavator') + capacityFor(state, 'deuteriumExcavator');
+  const bufferCap = capacityFor(state, 'transport');
+  const crystalCap = capacityFor(state, 'refinery');
+
+  const stockRoom = unbounded ? Infinity : Math.max(0, stardustCap - state.stardust);
+  const produced = Math.min(eff(rates.excavator + rates.he3Excavator + rates.deuteriumExcavator) * dt, stockRoom);
+  state.stardust = Math.max(0, state.stardust + produced);
+  state.stats.totalStardustProduced += produced;
+
+  // Isotope
+  let isotopeProduced = 0;
+  if (hasResearch(state, 'rareIsotopeMining')) {
+    isotopeProduced = eff(rates.excavator + rates.he3Excavator + rates.deuteriumExcavator) * dt * ISOTOPE_CHANCE;
+    state.isotope = Math.max(0, state.isotope + isotopeProduced);
+    state.stats.totalIsotopeProduced += isotopeProduced;
+  }
+
+  // Transport
+  const transportActive = state.facilities.transport.unlocked;
+  const refineryActive = state.facilities.refinery.unlocked;
+  const upstreamRate = rates.excavator + rates.he3Excavator + rates.deuteriumExcavator;
+  const transportCongested = transportActive && (upstreamRate > rates.transport || (refineryActive && state.refineryBuffer >= bufferCap - 0.01));
+  const rawMoved = transportActive ? Math.min(eff(rates.transport) * dt, state.stardust) : 0;
+  const bufferRoom = unbounded ? Infinity : Math.max(0, bufferCap - state.refineryBuffer);
+  const moved = refineryActive ? Math.min(rawMoved, bufferRoom) : rawMoved;
+
+  if (refineryActive) {
+    state.stardust = Math.max(0, state.stardust - moved);
+    state.refineryBuffer = Math.max(0, state.refineryBuffer + moved);
+  } else if (transportActive) {
+    // 运输线存在但精炼厂未建成时，转运的矿暂存于缓冲，仍可出售
+    state.stardust = Math.max(0, state.stardust - moved);
+    state.refineryBuffer = Math.max(0, state.refineryBuffer + moved);
+  }
+
+  // Refinery
+  const recipe = effectiveRecipe(state);
+  const crystalRoom = unbounded ? Infinity : Math.max(0, crystalCap - state.crystal);
+  const maxRefine = state.refineryBuffer / recipe;
+  const refined = Math.min(eff(rates.refinery) * dt, maxRefine, crystalRoom);
+  state.refineryBuffer = Math.max(0, state.refineryBuffer - refined * recipe);
+  state.crystal = Math.max(0, state.crystal + refined);
+  state.stats.totalCrystalProduced += refined;
+
+  return {
+    producedStardust: produced,
+    movedStardust: moved,
+    refinedCrystal: refined,
+    isotopeProduced,
+    energyDeficit: deficitFactor < 1,
+    rates,
+    bottlenecks: computeBottlenecks(state, rates),
+    transportCongested,
+  };
+}
+
+// ===== Economy =====
+function crystalPrice(state) {
+  const base = CRYSTAL_PRICE;
+  return hasResearch(state, 'crystalQuality') ? base * CRYSTAL_QUALITY_MULT : base;
+}
+
+function upgradeCost(state, id) {
+  const cfg = FACILITIES[id];
+  return Math.round(cfg.baseUpgradeCost * Math.pow(UPGRADE_COST_GROWTH, state.facilities[id].level - 1) + 1e-9);
+}
+function crystalUpgradeCost(state, id) {
+  const f = state.facilities[id];
+  if (f.level < CRYSTAL_UPGRADE_THRESHOLD) return 0;
+  const cfg = FACILITIES[id];
+  return Math.round(cfg.baseCrystalUpgradeCost * Math.pow(UPGRADE_COST_GROWTH, f.level - CRYSTAL_UPGRADE_THRESHOLD) + 1e-9);
+}
+function canUpgrade(state, id) {
+  const f = state.facilities[id];
+  if (!f.unlocked) return { ok: false, reason: '设施未解锁' };
+  if (f.level >= MAX_LEVEL) return { ok: false, reason: '已达最高等级' };
+  const cost = upgradeCost(state, id);
+  if (state.credits < cost) return { ok: false, reason: '信用点不足（需 ' + formatNumber(cost) + '）' };
+  const crystal = crystalUpgradeCost(state, id);
+  if (state.crystal < crystal) return { ok: false, reason: '晶体不足（需 ' + formatNumber(crystal) + '）' };
+  return { ok: true };
+}
+function upgradeFacility(state, id) {
+  const check = canUpgrade(state, id);
+  if (!check.ok) return check;
+  const cost = upgradeCost(state, id);
+  const crystal = crystalUpgradeCost(state, id);
+  state.credits -= cost;
+  state.crystal -= crystal;
+  state.facilities[id].level += 1;
+  state.stats.upgradesPerformed += 1;
+  return { ok: true };
+}
+
+function unlockCost(state, id) { return FACILITIES[id].unlockCost; }
+function unlockCrystalCost(state, id) { return FACILITIES[id].unlockCrystalCost || 0; }
+function canUnlock(state, id) {
+  const f = state.facilities[id];
+  if (f.unlocked) return { ok: false, reason: '设施已解锁' };
+  const cost = unlockCost(state, id);
+  if (state.credits < cost) return { ok: false, reason: '信用点不足（需 ' + formatNumber(cost) + '）' };
+  const crystal = unlockCrystalCost(state, id);
+  if (state.crystal < crystal) return { ok: false, reason: '晶体不足（需 ' + formatNumber(crystal) + '）' };
+  return { ok: true };
+}
+function unlockFacility(state, id) {
+  const check = canUnlock(state, id);
+  if (!check.ok) return check;
+  state.credits -= unlockCost(state, id);
+  state.crystal -= unlockCrystalCost(state, id);
+  state.facilities[id].unlocked = true;
+  return { ok: true };
+}
+
+function sellResource(state, resource, amount) {
+  const creditsMult = shopCreditsIncomeMultiplier(state);
+  if (resource === 'stardust') {
+    const held = state.stardust + (state.facilities.transport.unlocked && !state.facilities.refinery.unlocked ? state.refineryBuffer : 0);
+    if (held <= 0) return 0;
+    const qty = amount === undefined ? Math.floor(held) : Math.max(0, Math.min(Math.floor(amount), Math.floor(held)));
+    if (qty <= 0) return 0;
+    // 从主库存扣，不足再从缓冲扣（仅运输线解锁但精炼厂未建时缓冲也算可售）
+    let remaining = qty;
+    const fromMain = Math.min(remaining, Math.floor(state.stardust));
+    state.stardust -= fromMain;
+    remaining -= fromMain;
+    if (remaining > 0 && state.facilities.transport.unlocked && !state.facilities.refinery.unlocked) {
+      state.refineryBuffer -= remaining;
+    }
+    const gained = Math.floor(qty * STARDUST_PRICE * creditsMult);
+    state.credits += gained;
+    state.stats.totalCreditsEarned += gained;
+    return gained;
+  }
+  if (resource === 'crystal') {
+    const held = state.crystal;
+    if (held <= 0) return 0;
+    const qty = amount === undefined ? Math.floor(held) : Math.max(0, Math.min(Math.floor(amount), Math.floor(held)));
+    if (qty <= 0) return 0;
+    const gained = Math.floor(qty * crystalPrice(state) * creditsMult);
+    state.credits += gained;
+    state.crystal -= qty;
+    state.stats.totalCreditsEarned += gained;
+    return gained;
+  }
+  return 0;
+}
+
+function applyAutoSell(state) {
+  const result = { stardust: 0, crystal: 0 };
+  if (state.settings.autoSellStardust) {
+    const totalStardust = state.stardust + (state.facilities.transport.unlocked && !state.facilities.refinery.unlocked ? state.refineryBuffer : 0);
+    const over = Math.floor(totalStardust - state.settings.stardustKeepAmount);
+    if (over > 0) result.stardust += sellResource(state, 'stardust', over);
+  }
+  if (state.settings.autoSellCrystal) {
+    const over = Math.floor(state.crystal - state.settings.crystalKeepAmount);
+    if (over > 0) result.crystal += sellResource(state, 'crystal', over);
+  }
+  return result;
+}
+
+// ===== Events =====
+function rollNextEventAt(state, now, rand) {
+  rand = rand || Math.random;
+  const delay = EVENT_INTERVAL_MIN_MS + rand() * (EVENT_INTERVAL_MAX_MS - EVENT_INTERVAL_MIN_MS);
+  return now + delay;
+}
+
+function pickEventKind(state, rand) {
+  rand = rand || Math.random;
+  const r = rand();
+  const investAvailable = !state.eventState.investUsed && state.credits >= INVEST_COST;
+  if (investAvailable && r < 0.15) return 'invest';
+  let rr = r;
+  if (!investAvailable && r < 0.15) rr = rand();
+  if (rr < 0.4) return 'solar-storm';
+  return 'drone';
+}
+
+function maybeSpawnEvent(state, now, rand) {
+  rand = rand || Math.random;
+  if (state.eventState.pendingEvent) return null;
+  if (now < state.eventState.nextEventAt) return null;
+  const kind = pickEventKind(state, rand);
+  const ev = {
+    id: 'ev-' + now + '-' + Math.floor(rand() * 1e6),
+    kind: kind,
+    createdAt: now,
+  };
+  state.stats.eventsTriggered += 1;
+  if (kind === 'solar-storm') {
+    state.eventState.solarStormUntil = now + STORM_MS;
+    state.stats.solarStormsExperienced += 1;
+  } else {
+    state.eventState.pendingEvent = ev;
+  }
+  state.eventState.nextEventAt = rollNextEventAt(state, now, rand);
+  return ev;
+}
+
+function resolveEvent(state, id, opts) {
+  opts = opts || {};
+  const ev = state.eventState.pendingEvent;
+  if (!ev || ev.id !== id) return { ok: false, reason: '事件不存在' };
+  if (ev.kind === 'drone') {
+    const choice = opts.choice;
+    if (!choice) return { ok: false, reason: '请选择 A 或 B' };
+    state.eventState.pendingEvent = null;
+    state.stats.droneEventsHandled += 1;
+    if (choice === 'A') {
+      state.credits += DRONE_A_CREDITS;
+      state.stats.totalCreditsEarned += DRONE_A_CREDITS;
+      return { ok: true, kind: 'drone', choice: 'A', creditsGained: DRONE_A_CREDITS };
+    }
+    state.eventState.droneBoostUntil = (opts.now || Date.now()) + DRONE_BOOST_MS;
+    return { ok: true, kind: 'drone', choice: 'B' };
+  }
+  if (ev.kind === 'invest') {
+    state.eventState.pendingEvent = null;
+    if (opts.confirm !== true) return { ok: true, kind: 'invest', applied: false };
+    if (state.credits < INVEST_COST) return { ok: false, reason: '信用点不足' };
+    state.credits -= INVEST_COST;
+    state.eventState.investUsed = true;
+    state.stats.investmentsMade += 1;
+    return { ok: true, kind: 'invest', applied: true };
+  }
+  return { ok: false, reason: '无需结算的事件' };
+}
+
+// ===== Achievements =====
+function checkAchievements(state) {
+  const newly = [];
+  for (const def of ACHIEVEMENTS) {
+    if (state.achievements.includes(def.id)) continue;
+    var achUnlocked = false;
+    const s = state.stats;
+    switch (def.id) {
+      case 'p100Stardust': achUnlocked = s.totalStardustProduced >= 100; break;
+      case 'p1000Stardust': achUnlocked = s.totalStardustProduced >= 1000; break;
+      case 'p100Crystal': achUnlocked = s.totalCrystalProduced >= 100; break;
+      case 'c1000Credits': achUnlocked = s.totalCreditsEarned >= 1000; break;
+      case 'allFacilities': achUnlocked = FACILITY_ORDER.every(function(fid) { return state.facilities[fid].unlocked; }); break;
+      case 'allLevel3': {
+        const unlockedFacs = FACILITY_ORDER.filter(function(fid) { return state.facilities[fid].unlocked; });
+        achUnlocked = unlockedFacs.length > 0 && unlockedFacs.every(function(fid) { return state.facilities[fid].level >= 3; });
+        break;
+      }
+      case 'anyLevel5': achUnlocked = FACILITY_ORDER.some(function(fid) { return state.facilities[fid].level >= 5; }); break;
+      case 'tBasic': achUnlocked = hasResearch(state, 'basicResearch'); break;
+      case 't5': achUnlocked = s.researchesCompleted >= 5; break;
+      case 'ev10': achUnlocked = s.eventsTriggered >= 10; break;
+    }
+    if (achUnlocked) {
+      state.achievements.push(def.id);
+      state.credits += def.rewardCredits;
+      state.crystal += def.rewardCrystals;
+      newly.push(def);
+    }
+  }
+  return newly;
+}
+
+// ===== Prestige =====
+const STARDUST_EARN_RATES = { crystal: 1/100, isotope: 1/20, stardust: 1/1000 };
+const STARDUST_PER_FACILITY_LEVEL = 2;
+const STARDUST_PER_RESEARCH = 5;
+
+function computeStardustEarned(state) {
+  let points = 0;
+  points += state.crystal * STARDUST_EARN_RATES.crystal;
+  points += state.isotope * STARDUST_EARN_RATES.isotope;
+  points += state.stardust * STARDUST_EARN_RATES.stardust;
+  for (const f of Object.values(state.facilities)) {
+    points += Math.max(0, f.level - 1) * STARDUST_PER_FACILITY_LEVEL;
+  }
+  points += state.research.length * STARDUST_PER_RESEARCH;
+  return Math.floor(points * shopPrestigeGainMultiplier(state));
+}
+
+function executePrestige(state, now) {
+  const earned = computeStardustEarned(state);
+  const newPrestige = {
+    unlocked: [...state.prestige.unlocked],
+    stardust: state.prestige.stardust + earned,
+    prestigeLevel: state.prestige.prestigeLevel + 1,
+    history: [...state.prestige.history],
+    shopPurchases: { ...state.prestige.shopPurchases },
+  };
+  // Record history
+  const facilityLevels = {};
+  for (const id of FACILITY_ORDER) facilityLevels[id] = state.facilities[id].level;
+  newPrestige.history.push({
+    sequence: newPrestige.prestigeLevel,
+    timestamp: now,
+    baselineSnapshot: {
+      credits: state.credits, stardust: state.stardust, crystal: state.crystal,
+      isotope: state.isotope, facilityLevels: facilityLevels,
+      achievementCount: state.achievements.length, researchCount: state.research.length,
+      createdAt: state.createdAt,
+    },
+    stardustEarned: earned,
+  });
+  // Rebuild baseline
+  const facilities = {};
+  for (const id of FACILITY_ORDER) {
+    facilities[id] = { level: 1, unlocked: id === 'excavator' };
+  }
+  state.version = SAVE_VERSION;
+  state.credits = 100;
+  state.stardust = 0;
+  state.refineryBuffer = 0;
+  state.crystal = 0;
+  state.energy = 0;
+  state.isotope = 0;
+  state.facilities = facilities;
+  state.energyStrategy = 'balanced';
+  state.eventState = {
+    pendingEvent: null, nextEventAt: now + EVENT_FIRST_AFTER_MS,
+    droneBoostUntil: 0, solarStormUntil: 0, investUsed: false,
+  };
+  state.settings = {
+    autoSellStardust: false, stardustKeepAmount: DEFAULT_STARDUST_KEEP,
+    autoSellCrystal: false, crystalKeepAmount: DEFAULT_CRYSTAL_KEEP,
+  };
+  state.researchCenterUnlocked = false;
+  state.research = [];
+  state.stats = {
+    totalStardustProduced: 0, totalCrystalProduced: 0, totalCreditsEarned: 0,
+    totalEnergyProduced: 0, totalIsotopeProduced: 0,
+    eventsTriggered: 0, droneEventsHandled: 0, solarStormsExperienced: 0,
+    investmentsMade: 0, upgradesPerformed: 0, researchesCompleted: 0,
+    lastOfflineCrystalGain: 0,
+  };
+  state.achievements = [];
+  state.energyReleaseUntil = 0;
+  state.energyReleaseCooldownUntil = 0;
+  state.createdAt = now;
+  state.lastSavedAt = now;
+  state.prestige = newPrestige;
+  // Apply onBaseline shop bonuses
+  const excavTune = getItemLevel(state, 'shop-excavator-tuning');
+  if (excavTune > 0) state.facilities.excavator.level = Math.min(MAX_LEVEL, state.facilities.excavator.level + excavTune);
+  const startFund = getItemLevel(state, 'shop-starting-fund');
+  if (startFund > 0) state.credits += 300 * startFund;
+  return earned;
+}
+
+// ===== Offline =====
+function settleOffline(state, now) {
+  const elapsedMs = now - state.lastSavedAt;
+  const effectiveMs = Math.max(0, Math.min(elapsedMs, OFFLINE_CAP_MS));
+  if (effectiveMs <= 0) return { applied: false, elapsedMs: 0, effectiveMs: 0 };
+  state.eventState.pendingEvent = null;
+  state.eventState.droneBoostUntil = 0;
+  state.eventState.solarStormUntil = 0;
+  if (state.eventState.nextEventAt <= now) {
+    state.eventState.nextEventAt = rollNextEventAt(state, now);
+  }
+  const summary = tickProduction(state, effectiveMs, { unboundedCapacity: true, now: now });
+  state.lastSavedAt = now;
+  state.stats.lastOfflineCrystalGain = summary.refinedCrystal;
+  return { applied: true, elapsedMs: elapsedMs, effectiveMs: effectiveMs, summary: summary };
+}
+
+// ============================================================
+//  Game Runtime
+// ============================================================
+
+const SAVE_KEY = 'star-miner-demo-save';
+const STEP_MS = 100;
+const AUTOSAVE_INTERVAL_MS = 30000;
+
+let state;
+let selectedId = 'excavator';
+let lastSummary = null;
+let gameSpeed = 1;
+let lastTick = Date.now();
+let lastSave = Date.now();
+let currentPage = 'station';
+
+// ===== Save / Load =====
+function saveGame() {
+  state.lastSavedAt = Date.now();
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    return true;
+  } catch (e) { return false; }
+}
+function loadGame() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (data.version !== SAVE_VERSION) return null;
+    return data;
+  } catch (e) { return null; }
+}
+function resetGame() {
+  localStorage.removeItem(SAVE_KEY);
+  state = createNewGame(Date.now());
+  selectedId = 'excavator';
+  lastSummary = null;
+  toast('存档已重置', 'success');
+  updateAllUI();
+}
+
+// ===== Toasts =====
+function toast(msg, type) {
+  const host = document.getElementById('toasts');
+  if (!host) return;
+  const el = document.createElement('div');
+  el.className = 'toast' + (type ? ' ' + type : '');
+  el.textContent = msg;
+  host.appendChild(el);
+  setTimeout(function() {
+    el.style.opacity = '0';
+    el.style.transition = 'opacity 0.3s ease';
+    setTimeout(function() { el.remove(); }, 300);
+  }, 2500);
+}
+
+// ===== Modal =====
+function openModal(title, bodyHtml, buttons, onRendered) {
+  const root = document.getElementById('modal-root');
+  if (!root) return;
+  // Close existing
+  while (root.firstChild) root.removeChild(root.firstChild);
+
+  const backdrop = document.createElement('div');
+  backdrop.className = 'modal-backdrop';
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.innerHTML = '<h2>' + title + '</h2>' + bodyHtml;
+  const actions = document.createElement('div');
+  actions.className = 'modal-actions';
+
+  const close = function() { backdrop.remove(); };
+  for (const b of buttons) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn ' + (b.className || '').trim();
+    btn.textContent = b.label;
+    btn.addEventListener('click', function() { b.onClick(close); });
+    actions.appendChild(btn);
+  }
+  modal.appendChild(actions);
+  backdrop.appendChild(modal);
+  root.appendChild(backdrop);
+  backdrop.addEventListener('click', function(e) {
+    if (e.target === backdrop) close();
+  });
+  if (onRendered) onRendered();
+}
+
+// ===== HUD =====
+function updateHUD() {
+  document.getElementById('stat-credits').textContent = formatNumber(state.credits);
+  document.getElementById('stat-stardust').textContent = formatNumber(state.stardust);
+  document.getElementById('stat-crystal').textContent = formatNumber(state.crystal);
+  const energyEl = document.getElementById('stat-energy');
+  const station = state.facilities.energyStation;
+  if (!station.unlocked) {
+    energyEl.textContent = '—';
+    energyEl.className = 'stat-value';
+  } else if (hasResearch(state, 'energyReserve')) {
+    energyEl.textContent = formatNumber(state.energy) + ' / ' + ENERGY_RESERVE_CAP;
+    energyEl.className = 'stat-value';
+  } else {
+    const balance = rateFor(state, 'energyStation') - energyConsumptionPerSecond(state);
+    const sign = balance >= 0 ? '+' : '';
+    energyEl.textContent = sign + formatNumber(balance) + '/秒';
+    energyEl.className = 'stat-value ' + (balance < 0 ? 'danger' : '');
+  }
+}
+
+function updateEventStatus() {
+  const chip = document.getElementById('event-status');
+  const now = Date.now();
+  const stormMs = state.eventState.solarStormUntil - now;
+  const boostMs = state.eventState.droneBoostUntil - now;
+  if (stormMs > 0) {
+    const penalty = state.energyStrategy === 'balanced' ? '-10%' : '-20%';
+    chip.textContent = '太阳风暴 ' + penalty + ' ' + Math.ceil(stormMs / 1000) + 's';
+    chip.className = 'stat-value danger';
+  } else if (boostMs > 0) {
+    chip.textContent = '无人机加速 ×1.5 ' + Math.ceil(boostMs / 1000) + 's';
+    chip.className = 'stat-value boost';
+  } else {
+    chip.textContent = '正常';
+    chip.className = 'stat-value muted';
+  }
+}
+
+function updateSaveStatus(text) {
+  document.getElementById('save-status').textContent = text || '—';
+}
+
+// ===== Facility Panel =====
+function updatePanel() {
+  const f = state.facilities[selectedId];
+  const cfg = FACILITIES[selectedId];
+
+  document.getElementById('facility-name').textContent = cfg.name;
+  const statusEl = document.getElementById('facility-status');
+  statusEl.textContent = f.unlocked ? 'ONLINE' : 'LOCKED';
+  statusEl.className = 'status-badge ' + (f.unlocked ? 'ONLINE' : 'LOCKED');
+  document.getElementById('facility-level').textContent = f.unlocked ? 'Lv.' + f.level + ' / ' + MAX_LEVEL : '—';
+
+  const rate = rateFor(state, selectedId);
+  const cap = capacityFor(state, selectedId);
+  document.getElementById('facility-rate').textContent = f.unlocked ? formatRate(rate, cfg.rateUnit) : '—';
+
+  let capDisplay = '—';
+  let fillPct = 0;
+  if (f.unlocked) {
+    if (selectedId === 'energyStation') {
+      if (hasResearch(state, 'energyReserve')) {
+        capDisplay = formatNumber(state.energy) + ' / ' + ENERGY_RESERVE_CAP;
+        fillPct = Math.min(100, (state.energy / ENERGY_RESERVE_CAP) * 100);
+      } else {
+        capDisplay = '未解锁（研究能源储备）';
+        fillPct = 0;
+      }
+    } else {
+      capDisplay = formatNumber(cap);
+      let current = 0;
+      if (cfg.produces === 'stardust') {
+        if (selectedId === 'transport') current = state.refineryBuffer;
+        else current = state.stardust;
+      } else if (cfg.produces === 'crystal') {
+        current = state.crystal;
+      }
+      fillPct = cap > 0 ? Math.min(100, (current / cap) * 100) : 0;
+    }
+  }
+  document.getElementById('facility-capacity').textContent = capDisplay;
+  const fillEl = document.getElementById('capacity-fill');
+  fillEl.style.width = fillPct + '%';
+  fillEl.classList.toggle('full', fillPct >= 95);
+
+  // Bottleneck
+  const isBottleneck = lastSummary && lastSummary.bottlenecks.includes(selectedId);
+  if (selectedId === 'energyStation' && f.unlocked) {
+    const produced = rateFor(state, 'energyStation');
+    const consumed = energyConsumptionPerSecond(state);
+    const deficit = consumed > produced;
+    document.querySelector('#bottleneck-row dt').textContent = '收支';
+    document.getElementById('bottleneck-text').textContent = '产出 ' + produced.toFixed(2) + ' / 消耗 ' + consumed.toFixed(2) + ' /秒';
+    document.getElementById('bottleneck-text').style.color = deficit ? 'var(--warn)' : '';
+  } else {
+    document.querySelector('#bottleneck-row dt').textContent = '瓶颈';
+    document.getElementById('bottleneck-text').textContent = isBottleneck ? '下游处理不足' : '无';
+    document.getElementById('bottleneck-text').style.color = isBottleneck ? 'var(--warn)' : '';
+  }
+
+  // Hint
+  const hintEl = document.getElementById('facility-hint');
+  let hint = null;
+  if (selectedId === 'refinery' && f.unlocked && !state.facilities.transport.unlocked) {
+    hint = '等待原料：需先解锁磁轨运输线（600 信用点）';
+  }
+  if (selectedId === 'energyStation' && f.unlocked && !hasResearch(state, 'energyReserve')) {
+    hint = '研究「能源储备」后，盈余能量会存入储备池，并可释放获得 30 秒 ×1.2 加成';
+  }
+  hintEl.hidden = !hint;
+  if (hint) hintEl.textContent = hint;
+
+  // Action button
+  const btn = document.getElementById('btn-facility');
+  const costHint = document.getElementById('facility-cost');
+  const previewEl = document.getElementById('upgrade-preview');
+
+  if (!f.unlocked) {
+    const cost = unlockCost(state, selectedId);
+    const crystalCost = unlockCrystalCost(state, selectedId);
+    btn.textContent = crystalCost > 0
+      ? '解锁 · ' + formatNumber(cost) + ' 信用点 + ' + formatNumber(crystalCost) + ' 晶体'
+      : '解锁 · ' + formatNumber(cost) + ' 信用点';
+    const check = canUnlock(state, selectedId);
+    btn.disabled = !check.ok;
+    costHint.textContent = check.ok ? '' : (check.reason || '');
+    previewEl.hidden = true;
+  } else if (f.level >= MAX_LEVEL) {
+    btn.textContent = '已满级';
+    btn.disabled = true;
+    costHint.textContent = '';
+    previewEl.hidden = true;
+  } else {
+    const cost = upgradeCost(state, selectedId);
+    const crystalCost = crystalUpgradeCost(state, selectedId);
+    btn.textContent = crystalCost > 0
+      ? '升级（U）· ' + formatNumber(cost) + ' 信用点 + ' + formatNumber(crystalCost) + ' 晶体'
+      : '升级（U）· ' + formatNumber(cost) + ' 信用点';
+    const check = canUpgrade(state, selectedId);
+    btn.disabled = !check.ok;
+    costHint.textContent = check.ok ? '' : (check.reason || '');
+    // Preview
+    const currentRate = rate;
+    const nextRate = rawRate(state, selectedId, f.level + 1);
+    const deltaRate = nextRate - currentRate;
+    if (deltaRate > 0 && selectedId !== 'energyStation') {
+      previewEl.hidden = false;
+      const valuePerUnit = selectedId === 'refinery' ? crystalPrice(state) - effectiveRecipe(state) * STARDUST_PRICE : STARDUST_PRICE;
+      const paybackSec = deltaRate > 0 ? Math.ceil(cost / (deltaRate * valuePerUnit)) : null;
+      const paybackText = paybackSec ? '，约 ' + formatDuration(paybackSec * 1000) + ' 回本' : '';
+      previewEl.textContent = '升级后 +' + formatRate(deltaRate, cfg.rateUnit) + paybackText;
+    } else {
+      previewEl.hidden = true;
+    }
+  }
+
+  // Energy strategy effect
+  const stratMult = ENERGY_STRATEGIES[state.energyStrategy][selectedId];
+  const stratPct = Math.round((stratMult - 1) * 100);
+  document.getElementById('energy-effect').textContent =
+    stratPct === 0
+      ? ENERGY_STRATEGY_LABELS[state.energyStrategy] + '：对' + cfg.name + '无加成'
+      : ENERGY_STRATEGY_LABELS[state.energyStrategy] + '：对' + cfg.name + ' ' + (stratPct > 0 ? '+' : '') + stratPct + '%';
+
+  // Energy buttons active state
+  document.querySelectorAll('.energy-btn').forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.strategy === state.energyStrategy);
+  });
+
+  // Market card
+  document.getElementById('held-stardust').textContent = formatNumber(state.stardust + (state.facilities.transport.unlocked && !state.facilities.refinery.unlocked ? state.refineryBuffer : 0));
+  document.getElementById('held-crystal').textContent = formatNumber(state.crystal);
+  document.getElementById('crystal-price-label').textContent = String(crystalPrice(state));
+
+  // Auto sell
+  document.getElementById('auto-sell-stardust').checked = state.settings.autoSellStardust;
+  document.getElementById('auto-sell-crystal').checked = state.settings.autoSellCrystal;
+  if (document.activeElement !== document.getElementById('auto-sell-keep')) {
+    document.getElementById('auto-sell-keep').value = String(state.settings.stardustKeepAmount);
+  }
+  if (document.activeElement !== document.getElementById('auto-sell-crystal-keep')) {
+    document.getElementById('auto-sell-crystal-keep').value = String(state.settings.crystalKeepAmount);
+  }
+}
+
+// ===== Canvas Scene =====
+let canvas, ctx;
+let stars = [];
+let facilityPositions = {};
+let particles = [];
+let canvasWidth = 0, canvasHeight = 0;
+
+function initCanvas() {
+  canvas = document.getElementById('scene-canvas');
+  ctx = canvas.getContext('2d');
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+  generateStars();
+  calculateFacilityPositions();
+  animateScene();
+}
+
+function resizeCanvas() {
+  const host = document.getElementById('scene-host');
+  if (!host) return;
+  const rect = host.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  canvasWidth = rect.width;
+  canvasHeight = rect.height;
+  calculateFacilityPositions();
+  updateLabelPositions();
+}
+
+function generateStars() {
+  stars = [];
+  for (let i = 0; i < 150; i++) {
+    stars.push({
+      x: Math.random(),
+      y: Math.random(),
+      size: Math.random() * 1.5 + 0.5,
+      alpha: Math.random() * 0.6 + 0.2,
+      twinkle: Math.random() * Math.PI * 2,
+      twinkleSpeed: Math.random() * 0.02 + 0.005,
+    });
+  }
+}
+
+function calculateFacilityPositions() {
+  const cx = canvasWidth / 2;
+  const cy = canvasHeight / 2;
+  const radius = Math.min(canvasWidth, canvasHeight) * 0.32;
+
+  // 6 facilities arranged around the asteroid
+  const ids = ['excavator', 'he3Excavator', 'deuteriumExcavator', 'transport', 'refinery', 'energyStation'];
+  // Position: 3 excavators on left, transport/refinery chain on bottom-right, energy on top-right
+  const positions = [
+    { angle: Math.PI * 1.2, dist: 1.0 },   // excavator - left
+    { angle: Math.PI * 0.9, dist: 1.05 },  // he3 - top-left
+    { angle: Math.PI * 1.5, dist: 1.1 },   // deuterium - bottom-left
+    { angle: Math.PI * 0.25, dist: 1.0 },  // transport - right
+    { angle: Math.PI * 0.05, dist: 1.15 }, // refinery - bottom-right
+    { angle: Math.PI * 0.7, dist: 1.05 },  // energyStation - top-right
+  ];
+  for (let i = 0; i < ids.length; i++) {
+    const p = positions[i];
+    facilityPositions[ids[i]] = {
+      x: cx + Math.cos(p.angle) * radius * p.dist,
+      y: cy + Math.sin(p.angle) * radius * p.dist,
+    };
+  }
+}
+
+function updateLabelPositions() {
+  const labelsEl = document.getElementById('scene-labels');
+  labelsEl.innerHTML = '';
+  for (const id of FACILITY_ORDER) {
+    const pos = facilityPositions[id];
+    if (!pos) continue;
+    const f = state.facilities[id];
+    const cfg = FACILITIES[id];
+    const label = document.createElement('div');
+    label.className = 'facility-label' + (selectedId === id ? ' selected' : '');
+    label.dataset.status = f.unlocked ? 'ONLINE' : 'LOCKED';
+    label.style.left = pos.x + 'px';
+    label.style.top = (pos.y - 40) + 'px';
+    label.innerHTML = '<span class="label-name">' + cfg.name + '</span><span class="label-status ' + (f.unlocked ? 'ONLINE' : 'LOCKED') + '">' + (f.unlocked ? 'ONLINE · Lv.' + f.level : 'LOCKED') + '</span>';
+    label.addEventListener('click', function() {
+      selectedId = id;
+      currentPage = 'station';
+      updateNav();
+      updateAllUI();
+    });
+    labelsEl.appendChild(label);
+  }
+}
+
+function drawAsteroid(cx, cy, r, time) {
+  ctx.save();
+  // Main body
+  const grad = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r);
+  grad.addColorStop(0, '#4a4a5a');
+  grad.addColorStop(0.5, '#2d2d3a');
+  grad.addColorStop(1, '#1a1a24');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  // Slightly irregular shape
+  ctx.moveTo(cx + r, cy);
+  for (let a = 0; a < Math.PI * 2; a += Math.PI / 12) {
+    const wobble = 1 + 0.05 * Math.sin(a * 3 + time * 0.0001);
+    const x = cx + Math.cos(a) * r * wobble;
+    const y = cy + Math.sin(a) * r * wobble;
+    ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fill();
+
+  // Craters
+  ctx.fillStyle = 'rgba(20, 20, 30, 0.6)';
+  const craters = [
+    { x: -0.3, y: -0.2, r: 0.15 },
+    { x: 0.2, y: 0.3, r: 0.12 },
+    { x: -0.1, y: 0.4, r: 0.08 },
+    { x: 0.4, y: -0.1, r: 0.1 },
+    { x: -0.4, y: 0.1, r: 0.07 },
+  ];
+  for (const c of craters) {
+    ctx.beginPath();
+    ctx.arc(cx + c.x * r, cy + c.y * r, c.r * r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Highlight rim
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawFacilityNode(id, pos, time) {
+  const f = state.facilities[id];
+  const cfg = FACILITIES[id];
+  const isOnline = f.unlocked;
+  const isSelected = selectedId === id;
+  const isBottleneck = lastSummary && lastSummary.bottlenecks.includes(id);
+
+  ctx.save();
+  const size = 18;
+
+  // Glow for online
+  if (isOnline) {
+    const glowColor = isBottleneck ? 'rgba(232, 134, 46, 0.3)' : 'rgba(95, 191, 119, 0.3)';
+    const glowR = size + 8 + Math.sin(time * 0.003) * 3;
+    const glow = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, glowR);
+    glow.addColorStop(0, glowColor);
+    glow.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, glowR, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Selection ring
+  if (isSelected) {
+    ctx.strokeStyle = '#3fe0d8';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, size + 6, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Node body - shape based on type
+  const bodyColor = isOnline ? (isBottleneck ? '#e8862e' : '#5fbf77') : '#555a66';
+  ctx.fillStyle = isOnline ? '#1b1e24' : '#1a1c22';
+  ctx.strokeStyle = bodyColor;
+  ctx.lineWidth = 2;
+
+  if (isMining(id)) {
+    // Diamond shape for miners
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y - size);
+    ctx.lineTo(pos.x + size * 0.7, pos.y);
+    ctx.lineTo(pos.x, pos.y + size);
+    ctx.lineTo(pos.x - size * 0.7, pos.y);
+    ctx.closePath();
+  } else if (id === 'transport') {
+    // Rectangle for transport
+    ctx.beginPath();
+    ctx.rect(pos.x - size * 0.8, pos.y - size * 0.6, size * 1.6, size * 1.2);
+  } else if (id === 'refinery') {
+    // Hexagon for refinery
+    ctx.beginPath();
+    for (let a = 0; a < 6; a++) {
+      const angle = Math.PI / 3 * a - Math.PI / 2;
+      const x = pos.x + Math.cos(angle) * size;
+      const y = pos.y + Math.sin(angle) * size;
+      if (a === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+  } else if (id === 'energyStation') {
+    // Circle with inner ring for energy
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, size, 0, Math.PI * 2);
+  }
+  ctx.fill();
+  ctx.stroke();
+
+  // Inner icon
+  ctx.fillStyle = bodyColor;
+  ctx.font = 'bold 12px system-ui';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  let icon = '';
+  if (id === 'excavator') icon = '◆';
+  else if (id === 'he3Excavator') icon = '◇';
+  else if (id === 'deuteriumExcavator') icon = '◆';
+  else if (id === 'transport') icon = '≡';
+  else if (id === 'refinery') icon = '⬡';
+  else if (id === 'energyStation') icon = '⚡';
+  ctx.fillText(icon, pos.x, pos.y);
+
+  ctx.restore();
+}
+
+function drawTransportLinks(time) {
+  const cx = canvasWidth / 2;
+  const cy = canvasHeight / 2;
+
+  // Links: excavators transport to transport line -> refinery
+  // We'll draw lines from each miner to the center (representing transport)
+  // and from transport to refinery
+
+  ctx.save();
+
+  // Stardust flow: miners -> transport
+  const transportActive = state.facilities.transport.unlocked;
+  const miners = ['excavator', 'he3Excavator', 'deuteriumExcavator'];
+
+  for (const miner of miners) {
+    if (!state.facilities[miner].unlocked) continue;
+    const from = facilityPositions[miner];
+    const to = facilityPositions['transport'];
+    if (!from || !to) continue;
+
+    ctx.strokeStyle = transportActive ? 'rgba(63, 224, 216, 0.3)' : 'rgba(90, 100, 110, 0.2)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(from.x, from.y);
+    ctx.lineTo(to.x, to.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Flowing particles
+    if (transportActive && state.facilities[miner].unlocked) {
+      const speed = 0.3 + rateFor(state, miner) * 0.2;
+      const numParticles = Math.ceil(rateFor(state, miner) * 0.5);
+      for (let i = 0; i < numParticles; i++) {
+        const t = ((time * 0.001 * speed) + i / numParticles) % 1;
+        const px = from.x + (to.x - from.x) * t;
+        const py = from.y + (to.y - from.y) * t;
+        ctx.fillStyle = 'rgba(63, 224, 216, 0.8)';
+        ctx.beginPath();
+        ctx.arc(px, py, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
+  // Transport -> Refinery
+  if (state.facilities.refinery.unlocked && state.facilities.transport.unlocked) {
+    const from = facilityPositions['transport'];
+    const to = facilityPositions['refinery'];
+    ctx.strokeStyle = 'rgba(167, 139, 250, 0.4)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.moveTo(from.x, from.y);
+    ctx.lineTo(to.x, to.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Purple particles (refined)
+    const refRate = rateFor(state, 'refinery');
+    if (refRate > 0) {
+      const numParticles = Math.ceil(refRate * 2);
+      for (let i = 0; i < numParticles; i++) {
+        const t = ((time * 0.0008) + i / numParticles) % 1;
+        const px = from.x + (to.x - from.x) * t;
+        const py = from.y + (to.y - from.y) * t;
+        ctx.fillStyle = 'rgba(167, 139, 250, 0.9)';
+        ctx.beginPath();
+        ctx.arc(px, py, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
+  // Energy lines from energy station to all facilities
+  if (state.facilities.energyStation.unlocked) {
+    const from = facilityPositions['energyStation'];
+    for (const id of FACILITY_ORDER) {
+      if (id === 'energyStation') continue;
+      if (!state.facilities[id].unlocked) continue;
+      const to = facilityPositions[id];
+      if (!to) continue;
+      ctx.strokeStyle = 'rgba(201, 162, 39, 0.15)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(from.x, from.y);
+      ctx.lineTo(to.x, to.y);
+      ctx.stroke();
+    }
+  }
+
+  ctx.restore();
+}
+
+function animateScene() {
+  const time = performance.now();
+  ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+  // Stars
+  for (const s of stars) {
+    s.twinkle += s.twinkleSpeed;
+    const alpha = s.alpha * (0.6 + 0.4 * Math.sin(s.twinkle));
+    ctx.fillStyle = 'rgba(200, 210, 230, ' + alpha + ')';
+    ctx.beginPath();
+    ctx.arc(s.x * canvasWidth, s.y * canvasHeight, s.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  const cx = canvasWidth / 2;
+  const cy = canvasHeight / 2;
+  const asteroidR = Math.min(canvasWidth, canvasHeight) * 0.16;
+
+  // Transport links (behind asteroid)
+  drawTransportLinks(time);
+
+  // Asteroid
+  drawAsteroid(cx, cy, asteroidR, time);
+
+  // Facility nodes
+  for (const id of FACILITY_ORDER) {
+    const pos = facilityPositions[id];
+    if (pos) drawFacilityNode(id, pos, time);
+  }
+
+  requestAnimationFrame(animateScene);
+}
+
+// ===== Nav =====
+function updateNav() {
+  document.querySelectorAll('.nav-btn').forEach(function(btn) {
+    const page = btn.dataset.page;
+    btn.classList.toggle('active', page === currentPage);
+  });
+}
+
+function showPage(page) {
+  if (page === 'research') {
+    if (!state.researchCenterUnlocked && state.stats.totalCrystalProduced < RESEARCH_CENTER_UNLOCK_CRYSTALS) {
+      toast('研究中心未解锁（累计产出 50 晶体后解锁）', 'error');
+      return;
+    }
+    if (!state.researchCenterUnlocked) {
+      state.researchCenterUnlocked = true;
+      toast('研究中心已解锁！');
+    }
+    showResearchModal();
+  } else if (page === 'achievements') {
+    showAchievementsModal();
+  } else if (page === 'prestige') {
+    showPrestigeModal();
+  } else if (page === 'shop') {
+    showShopModal();
+  } else if (page === 'help') {
+    showHelpModal();
+  } else if (page === 'save') {
+    showSaveModal();
+  } else if (page === 'station') {
+    currentPage = 'station';
+    updateNav();
+  } else if (page === 'reactor' || page === 'starmap') {
+    toast('后续版本开放，敬请期待');
+  }
+}
+
+// ===== Modals =====
+function showResearchModal() {
+  let html = '<p class="muted-text" style="margin-bottom:12px">消耗晶体研究科技，永久提升矿站效率。当前晶体：<span class="purple">' + formatNumber(state.crystal) + '</span></p>';
+  const branches = ['excavation', 'energy', 'refinement', 'transport'];
+  html += '<div class="research-branches">';
+  for (const branch of branches) {
+    const nodes = TECH_NODES.filter(function(n) { return n.branch === branch; });
+    html += '<div class="research-branch"><h3>' + TECH_BRANCH_LABELS[branch] + '</h3>';
+    html += '<div class="tech-grid">';
+    for (const node of nodes) {
+      const done = hasResearch(state, node.id);
+      const can = canResearch(state, node.id);
+      let cls = 'tech-node';
+      if (done) cls += ' done';
+      else if (!can.ok) cls += ' locked';
+      const costText = done ? '已研究' : node.cost + ' 晶体';
+      html += '<div class="' + cls + '" data-tech="' + node.id + '">' +
+        '<div class="tech-name">' + node.name + '</div>' +
+        '<div class="tech-desc">' + node.description + '</div>' +
+        '<div class="tech-cost">' + costText + '</div>' +
+        '</div>';
+    }
+    html += '</div></div>';
+  }
+  html += '</div>';
+
+  openModal('科技研究', html, [{ label: '关闭', onClick: function(close) { close(); } }], function() {
+    document.querySelectorAll('.tech-node').forEach(function(el) {
+      el.addEventListener('click', function() {
+        const id = el.dataset.tech;
+        if (hasResearch(state, id)) return;
+        const r = researchTech(state, id);
+        if (r.ok) {
+          toast('研究完成：' + TECH_BY_ID[id].name, 'success');
+          close();
+          showResearchModal();
+          saveGame();
+        } else {
+          toast(r.reason || '无法研究', 'error');
+        }
+      });
+    });
+  });
+}
+
+function showAchievementsModal() {
+  const total = ACHIEVEMENTS.length;
+  const earned = state.achievements.length;
+  const mult = achievementProductionMultiplier(state);
+  const multPct = Math.round((mult - 1) * 100);
+
+  let html = '<div class="achievement-summary">' +
+    '<div class="achievement-stat"><div class="num">' + earned + '/' + total + '</div><div class="label">已解锁</div></div>' +
+    '<div class="achievement-stat"><div class="num">+' + multPct + '%</div><div class="label">产量加成</div></div>' +
+    '</div>';
+  html += '<div class="achievement-list">';
+  for (const a of ACHIEVEMENTS) {
+    const done = state.achievements.includes(a.id);
+    html += '<div class="achievement-item ' + (done ? 'done' : 'locked') + '">' +
+      '<div class="achievement-name">' + a.name + '</div>' +
+      '<div class="achievement-desc">' + a.description + '</div>' +
+      '<div class="achievement-reward">奖励：' + a.rewardCredits + ' 信用点 + ' + a.rewardCrystals + ' 晶体</div>' +
+      '</div>';
+  }
+  html += '</div>';
+
+  openModal('成就', html, [{ label: '关闭', onClick: function(close) { close(); } }]);
+}
+
+function showPrestigeModal() {
+  const earned = computeStardustEarned(state);
+  const newLevel = state.prestige.prestigeLevel + 1;
+  const newBalance = state.prestige.stardust + earned;
+
+  let html = '<div class="prestige-info">' +
+    '<div class="stat"><div class="num">' + state.prestige.prestigeLevel + '</div><div class="label">当前转生</div></div>' +
+    '<div class="stat"><div class="num cyan">' + formatNumber(state.prestige.stardust) + '</div><div class="label">星核余额</div></div>' +
+    '</div>';
+
+  html += '<div class="prestige-earn-label">本次转生可获得</div>';
+  html += '<div class="prestige-earn">' + earned + ' 星核</div>';
+
+  html += '<div class="prestige-breakdown">';
+  html += '<div class="row"><dt>晶体贡献</dt><dd>' + formatNumber(state.crystal) + ' → ' + Math.floor(state.crystal * STARDUST_EARN_RATES.crystal) + ' 星核</dd></div>';
+  const totalLevels = FACILITY_ORDER.reduce(function(s, id) { return s + Math.max(0, state.facilities[id].level - 1); }, 0);
+  html += '<div class="row"><dt>设施等级</dt><dd>' + totalLevels + ' 级 → ' + (totalLevels * STARDUST_PER_FACILITY_LEVEL) + ' 星核</dd></div>';
+  html += '<div class="row"><dt>研究进度</dt><dd>' + state.research.length + ' 项 → ' + (state.research.length * STARDUST_PER_RESEARCH) + ' 星核</dd></div>';
+  const shopMult = shopPrestigeGainMultiplier(state);
+  if (shopMult > 1) html += '<div class="row"><dt>转生增幅器</dt><dd>×' + shopMult.toFixed(2) + '</dd></div>';
+  html += '</div>';
+
+  html += '<div class="prestige-warning">⚠ 转生后：信用点/星尘/晶体/同位素归零，设施回 Lv.1/锁定，研究清空，成就清空。仅保留星核余额与转生等级。</div>';
+
+  openModal('转生仪式', html, [
+    { label: '确认转生', className: 'primary danger', onClick: function(close) {
+      if (earned < 1) {
+        toast('至少获得 1 星核才能转生', 'error');
+        return;
+      }
+      const got = executePrestige(state, Date.now());
+      toast('转生完成！获得 ' + got + ' 星核', 'success');
+      selectedId = 'excavator';
+      currentPage = 'station';
+      close();
+      updateAllUI();
+      saveGame();
+    }},
+    { label: '取消', onClick: function(close) { close(); } },
+  ]);
+}
+
+function showShopModal() {
+  let html = '<p class="muted-text" style="margin-bottom:12px">星核余额：<span class="cyan" style="font-size:18px;font-weight:600">' + formatNumber(state.prestige.stardust) + '</span> 星核 · 转生次数：' + state.prestige.prestigeLevel + '</p>';
+
+  const categories = ['economy', 'production', 'prestige'];
+  for (const cat of categories) {
+    const items = Object.values(SHOP_ITEMS).filter(function(i) { return i.category === cat; });
+    if (items.length === 0) continue;
+    html += '<div class="shop-section"><h3>' + SHOP_CATEGORY_LABELS[cat] + '</h3>';
+    for (const item of items) {
+      const level = getItemLevel(state, item.id);
+      const maxed = level >= item.maxLevel;
+      const cost = getItemCost(state, item.id);
+      const can = canPurchaseItem(state, item.id);
+
+      html += '<div class="shop-item">' +
+        '<div class="shop-item-info">' +
+        '<div class="shop-item-name">' + item.name + '</div>' +
+        '<div class="shop-item-desc">' + item.description + '</div>' +
+        '<div class="shop-item-level">等级 ' + level + ' / ' + item.maxLevel + '</div>' +
+        '</div>' +
+        '<div class="shop-item-action">' +
+        '<div class="shop-item-cost">' + (maxed ? '已满级' : cost + ' 星核') + '</div>' +
+        '<button class="btn primary shop-buy-btn" data-item="' + item.id + '" ' + (can.ok ? '' : 'disabled') + '>' + (maxed ? '已满级' : '购买') + '</button>' +
+        '</div>' +
+        '</div>';
+    }
+    html += '</div>';
+  }
+
+  openModal('星核商店', html, [{ label: '关闭', onClick: function(close) { close(); } }], function() {
+    document.querySelectorAll('.shop-buy-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        const id = btn.dataset.item;
+        const r = purchaseItem(state, id);
+        if (r.ok) {
+          toast('购买成功：' + SHOP_ITEMS[id].name, 'success');
+          close();
+          showShopModal();
+          saveGame();
+        } else {
+          toast(r.reason || '购买失败', 'error');
+        }
+      });
+    });
+  });
+}
+
+function showHelpModal() {
+  const html = '<div class="help-section">' +
+    '<h3>游戏简介</h3>' +
+    '<p>星际矿站是一款深空题材的放置类采矿游戏。你经营一座小行星矿站，通过采掘星尘矿、精炼晶体、研究科技来不断提升产能。</p>' +
+    '</div>' +
+    '<div class="help-section">' +
+    '<h3>基础玩法</h3>' +
+    '<ul>' +
+    '<li><strong>采掘器</strong>自动产出星尘矿，存储在矿仓中</li>' +
+    '<li>点击「出售」把星尘矿换成<strong>信用点</strong></li>' +
+    '<li>用信用点<strong>升级</strong>设施提升产量</li>' +
+    '<li>解锁<strong>运输线</strong>和<strong>精炼厂</strong>生产晶体</li>' +
+    '<li>晶体用于高级升级和<strong>科技研究</strong></li>' +
+    '<li>解锁<strong>能源站</strong>后需注意能源收支</li>' +
+    '</ul>' +
+    '</div>' +
+    '<div class="help-section">' +
+    '<h3>能源策略</h3>' +
+    '<p>三种能源策略可以切换，优先侧重不同环节的产能。快捷键 1 / 2 / 3。</p>' +
+    '</div>' +
+    '<div class="help-section">' +
+    '<h3>快捷键</h3>' +
+    '<ul>' +
+    '<li><strong>1 / 2 / 3</strong> — 切换能源策略</li>' +
+    '<li><strong>U</strong> — 升级当前选中设施</li>' +
+    '<li><strong>M</strong> — 手动存档</li>' +
+    '<li><strong>~</strong> — 打开调试面板</li>' +
+    '<li><strong>Esc</strong> — 关闭弹窗</li>' +
+    '</ul>' +
+    '</div>' +
+    '<div class="help-section">' +
+    '<h3>Demo 功能</h3>' +
+    '<ul>' +
+    '<li><strong>1× / 2× / 5×</strong>速度调节，方便快速体验</li>' +
+    '<li>按 <strong>~</strong> 打开调试面板，可修改资源/等级/触发事件</li>' +
+    '<li>存档管理面板可<strong>重置存档</strong>重新开始</li>' +
+    '</ul>' +
+    '</div>';
+  openModal('帮助', html, [{ label: '关闭', className: 'primary', onClick: function(close) { close(); } }]);
+}
+
+function showSaveModal() {
+  const html = '<p>当前存档信息：</p>' +
+    '<div class="offline-list">' +
+    '<div class="row"><dt>创建时间</dt><dd>' + new Date(state.createdAt).toLocaleString('zh-CN') + '</dd></div>' +
+    '<div class="row"><dt>最近保存</dt><dd>' + new Date(state.lastSavedAt).toLocaleString('zh-CN') + '</dd></div>' +
+    '<div class="row"><dt>信用点</dt><dd class="gold">' + formatNumber(state.credits) + '</dd></div>' +
+    '<div class="row"><dt>星尘矿</dt><dd class="cyan">' + formatNumber(state.stardust) + '</dd></div>' +
+    '<div class="row"><dt>晶体</dt><dd class="purple">' + formatNumber(state.crystal) + '</dd></div>' +
+    '</div>' +
+    '<p class="muted-text" style="margin-top:10px">存档保存在浏览器 localStorage 中，清理浏览器数据会丢失存档。</p>';
+  openModal('存档管理', html, [
+    { label: '立即存档', className: 'primary', onClick: function(close) {
+      saveGame();
+      updateSaveStatus('已保存 ' + new Date().toLocaleTimeString('zh-CN'));
+      toast('存档成功', 'success');
+      close();
+    }},
+    { label: '重新开始', className: 'danger', onClick: function(close) {
+      if (confirm('确定要重置所有进度吗？此操作不可撤销。')) {
+        close();
+        resetGame();
+      }
+    }},
+    { label: '关闭', onClick: function(close) { close(); } },
+  ]);
+}
+
+function showDebugPanel() {
+  const f = state.facilities;
+  const html = '<div class="debug-grid">' +
+    '<div class="debug-field"><label>信用点</label><input type="number" id="dbg-credits" value="' + Math.floor(state.credits) + '"></div>' +
+    '<div class="debug-field"><label>星尘矿</label><input type="number" id="dbg-stardust" value="' + Math.floor(state.stardust) + '"></div>' +
+    '<div class="debug-field"><label>晶体</label><input type="number" id="dbg-crystal" value="' + Math.floor(state.crystal) + '"></div>' +
+    '<div class="debug-field"><label>同位素</label><input type="number" id="dbg-isotope" value="' + Math.floor(state.isotope) + '"></div>' +
+    '</div>' +
+    '<h3 style="font-size:13px;margin-bottom:8px">设施等级</h3>' +
+    '<div class="debug-grid">' +
+    '<div class="debug-field"><label>采掘器</label><input type="number" id="dbg-lv-excavator" min="1" max="5" value="' + f.excavator.level + '"></div>' +
+    '<div class="debug-field"><label>氦-3 采掘器</label><input type="number" id="dbg-lv-he3" min="1" max="5" value="' + f.he3Excavator.level + '"></div>' +
+    '<div class="debug-field"><label>氘采掘器</label><input type="number" id="dbg-lv-deut" min="1" max="5" value="' + f.deuteriumExcavator.level + '"></div>' +
+    '<div class="debug-field"><label>运输线</label><input type="number" id="dbg-lv-trans" min="1" max="5" value="' + f.transport.level + '"></div>' +
+    '<div class="debug-field"><label>精炼厂</label><input type="number" id="dbg-lv-ref" min="1" max="5" value="' + f.refinery.level + '"></div>' +
+    '<div class="debug-field"><label>能源站</label><input type="number" id="dbg-lv-eng" min="1" max="5" value="' + f.energyStation.level + '"></div>' +
+    '</div>' +
+    '<div class="debug-section"><h3>快捷操作</h3><div class="debug-actions">' +
+    '<button class="btn" id="dbg-unlock-all">解锁全部设施</button>' +
+    '<button class="btn" id="dbg-drone-event">触发无人机事件</button>' +
+    '<button class="btn" id="dbg-storm-event">触发太阳风暴</button>' +
+    '<button class="btn" id="dbg-unlock-research">解锁研究中心</button>' +
+    '</div></div>';
+
+  openModal('调试面板', html, [
+    { label: '应用修改', className: 'primary', onClick: function(close) {
+      state.credits = parseFloat(document.getElementById('dbg-credits').value) || 0;
+      state.stardust = parseFloat(document.getElementById('dbg-stardust').value) || 0;
+      state.crystal = parseFloat(document.getElementById('dbg-crystal').value) || 0;
+      state.isotope = parseFloat(document.getElementById('dbg-isotope').value) || 0;
+      state.facilities.excavator.level = Math.min(MAX_LEVEL, Math.max(1, parseInt(document.getElementById('dbg-lv-excavator').value) || 1));
+      state.facilities.he3Excavator.level = Math.min(MAX_LEVEL, Math.max(1, parseInt(document.getElementById('dbg-lv-he3').value) || 1));
+      state.facilities.deuteriumExcavator.level = Math.min(MAX_LEVEL, Math.max(1, parseInt(document.getElementById('dbg-lv-deut').value) || 1));
+      state.facilities.transport.level = Math.min(MAX_LEVEL, Math.max(1, parseInt(document.getElementById('dbg-lv-trans').value) || 1));
+      state.facilities.refinery.level = Math.min(MAX_LEVEL, Math.max(1, parseInt(document.getElementById('dbg-lv-ref').value) || 1));
+      state.facilities.energyStation.level = Math.min(MAX_LEVEL, Math.max(1, parseInt(document.getElementById('dbg-lv-eng').value) || 1));
+      toast('已应用调试修改', 'success');
+      close();
+      updateAllUI();
+      saveGame();
+    }},
+    { label: '关闭', onClick: function(close) { close(); } },
+  ], function() {
+    document.getElementById('dbg-unlock-all').addEventListener('click', function() {
+      for (const id of FACILITY_ORDER) state.facilities[id].unlocked = true;
+      toast('已解锁全部设施', 'success');
+    });
+    document.getElementById('dbg-drone-event').addEventListener('click', function() {
+      state.eventState.nextEventAt = Date.now();
+      // Force drone
+      const ev = { id: 'dbg-drone-' + Date.now(), kind: 'drone', createdAt: Date.now() };
+      state.eventState.pendingEvent = ev;
+      state.stats.eventsTriggered += 1;
+      toast('已触发无人机事件');
+      close();
+      showDroneEvent(ev);
+    });
+    document.getElementById('dbg-storm-event').addEventListener('click', function() {
+      state.eventState.solarStormUntil = Date.now() + STORM_MS;
+      state.stats.solarStormsExperienced += 1;
+      state.stats.eventsTriggered += 1;
+      toast('太阳风暴来袭！', 'error');
+      close();
+      showSolarStormEvent();
+    });
+    document.getElementById('dbg-unlock-research').addEventListener('click', function() {
+      state.researchCenterUnlocked = true;
+      toast('研究中心已解锁', 'success');
+    });
+  });
+}
+
+// ===== Events UI =====
+function showDroneEvent(ev) {
+  const host = document.getElementById('event-host');
+  host.querySelectorAll('.event-card').forEach(function(el) { el.remove(); });
+  const card = document.createElement('div');
+  card.className = 'event-card';
+  card.innerHTML = '<h3>✈ 无人机事件</h3><p>选择奖励：A 立即获得 50 信用点；B 所有设施 30 秒内速度 ×1.5。</p>';
+  const actions = document.createElement('div');
+  actions.className = 'event-actions';
+  const btnA = document.createElement('button');
+  btnA.className = 'btn';
+  btnA.textContent = 'A · +50 信用点';
+  const btnB = document.createElement('button');
+  btnB.className = 'btn primary';
+  btnB.textContent = 'B · ×1.5 速度 30 秒';
+  actions.append(btnA, btnB);
+  card.appendChild(actions);
+  host.appendChild(card);
+
+  btnA.addEventListener('click', function() {
+    card.remove();
+    const r = resolveEvent(state, ev.id, { choice: 'A' });
+    if (r.ok) {
+      toast('无人机奖励：+' + r.creditsGained + ' 信用点', 'success');
+      saveGame();
+    } else toast(r.reason || '事件已失效', 'error');
+  });
+  btnB.addEventListener('click', function() {
+    card.remove();
+    const r = resolveEvent(state, ev.id, { choice: 'B', now: Date.now() });
+    if (r.ok) {
+      toast('无人机奖励：全设施 ×1.5 速度 30 秒');
+      saveGame();
+    } else toast(r.reason || '事件已失效', 'error');
+  });
+}
+
+function showSolarStormEvent() {
+  const host = document.getElementById('event-host');
+  const card = document.createElement('div');
+  card.className = 'event-card storm';
+  card.innerHTML = '<h3>☀ 太阳风暴</h3><p>全设施速度降低 20%（均衡策略减半），持续 1 分钟。</p>';
+  const actions = document.createElement('div');
+  actions.className = 'event-actions';
+  const ok = document.createElement('button');
+  ok.className = 'btn';
+  ok.textContent = '知道了';
+  actions.appendChild(ok);
+  card.appendChild(actions);
+  host.appendChild(card);
+  ok.addEventListener('click', function() { card.remove(); });
+  setTimeout(function() { if (card.parentElement) card.remove(); }, 12000);
+}
+
+function showInvestEvent(ev) {
+  const host = document.getElementById('event-host');
+  host.querySelectorAll('.event-card').forEach(function(el) { el.remove(); });
+  const card = document.createElement('div');
+  card.className = 'event-card';
+  card.innerHTML = '<h3>◆ 投入型机会</h3><p>消耗 200 信用点，永久提升采掘速度 +5%（仅一次）。</p>';
+  const actions = document.createElement('div');
+  actions.className = 'event-actions';
+  const btnInvest = document.createElement('button');
+  btnInvest.className = 'btn primary';
+  btnInvest.textContent = '投资（-200 信用点）';
+  const btnIgnore = document.createElement('button');
+  btnIgnore.className = 'btn';
+  btnIgnore.textContent = '忽略';
+  actions.append(btnInvest, btnIgnore);
+  card.appendChild(actions);
+  host.appendChild(card);
+  btnInvest.addEventListener('click', function() {
+    card.remove();
+    const r = resolveEvent(state, ev.id, { confirm: true });
+    if (r.ok) {
+      toast('投入完成：采掘速度永久 +5%', 'success');
+      saveGame();
+    } else toast(r.reason || '投资失败', 'error');
+  });
+  btnIgnore.addEventListener('click', function() {
+    card.remove();
+    resolveEvent(state, ev.id, { confirm: false });
+  });
+}
+
+// ===== Guide =====
+let guideStep = 0;
+let guideDismissed = false;
+const GUIDE_STEPS = [
+  { name: '出售矿石', title: '第 1 步：出售矿石', body: '点「交易」区的出售按钮，把星尘矿换成信用点。', target: 'market-card' },
+  { name: '升级采掘器', title: '第 2 步：升级采掘器', body: '点「升级（U）」按钮提升采掘产出。', target: 'facility-card' },
+  { name: '切换能源策略', title: '第 3 步：切换能源策略', body: '试试切换三种能源策略，观察产出倍率变化。', target: 'energy-card' },
+  { name: '解锁运输线', title: '第 4 步：解锁运输线', body: '攒 600 信用点，点击场景中的磁轨运输线后解锁。', target: 'facility-card' },
+];
+
+function clearGuideHighlight() {
+  for (const id of ['market-card', 'energy-card', 'facility-card']) {
+    document.getElementById(id)?.classList.remove('guide-highlight');
+  }
+}
+
+function updateGuideCard() {
+  const guide = document.getElementById('guide-card');
+  if (guideDismissed || state.facilities.transport.unlocked || guideStep >= 4) {
+    guide.hidden = true;
+    clearGuideHighlight();
+    return;
+  }
+  const step = GUIDE_STEPS[guideStep];
+  guide.hidden = false;
+  document.getElementById('guide-title').textContent = step.title;
+  document.getElementById('guide-body').textContent = step.body;
+  const stepsEl = document.getElementById('guide-steps');
+  stepsEl.innerHTML = GUIDE_STEPS.map(function(s, i) {
+    const stateCls = i < guideStep ? 'done' : i === guideStep ? 'current' : 'pending';
+    const mark = i < guideStep ? '✓' : String(i + 1);
+    return '<li class="guide-step ' + stateCls + '"><span class="guide-step-mark">' + mark + '</span>' + s.name + '</li>';
+  }).join('');
+  clearGuideHighlight();
+  document.getElementById(step.target)?.classList.add('guide-highlight');
+}
+
+function advanceGuide() {
+  if (guideStep < 4) {
+    guideStep += 1;
+    updateGuideCard();
+  }
+}
+
+// ===== Game Loop =====
+function gameTick() {
+  const now = Date.now();
+  let delta = now - lastTick;
+  lastTick = now;
+
+  // Apply speed multiplier
+  delta = delta * gameSpeed;
+
+  // Clamp to prevent huge jumps
+  delta = Math.min(delta, 5000);
+
+  // Run multiple sub-ticks for accuracy with speed > 1
+  const subTicks = Math.ceil(delta / STEP_MS);
+  const subDelta = delta / subTicks;
+
+  let summary = null;
+  for (let i = 0; i < subTicks; i++) {
+    summary = tickProduction(state, subDelta);
+    applyAutoSell(state);
+
+    // Events
+    const ev = maybeSpawnEvent(state, now);
+    if (ev) {
+      if (ev.kind === 'drone') showDroneEvent(ev);
+      else if (ev.kind === 'invest') showInvestEvent(ev);
+      else if (ev.kind === 'solar-storm') showSolarStormEvent();
+    }
+  }
+  lastSummary = summary;
+
+  // Achievements
+  const newly = checkAchievements(state);
+  for (const a of newly) {
+    toast('成就解锁：' + a.name + '（+' + a.rewardCredits + '信用点, +' + a.rewardCrystals + '晶体）', 'success');
+  }
+
+  // Research center unlock check
+  if (!state.researchCenterUnlocked && state.stats.totalCrystalProduced >= RESEARCH_CENTER_UNLOCK_CRYSTALS) {
+    // Don't auto-unlock, but make research nav available
+  }
+
+  // Update UI
+  updateHUD();
+  updateEventStatus();
+  updatePanel();
+  updateLabelPositions();
+
+  // Guide progress
+  if (!guideDismissed && guideStep < 4) {
+    updateGuideCard();
+  }
+
+  // Autosave
+  if (now - lastSave > AUTOSAVE_INTERVAL_MS) {
+    saveGame();
+    lastSave = now;
+    updateSaveStatus('已保存 ' + new Date(now).toLocaleTimeString('zh-CN'));
+  }
+}
+
+function updateAllUI() {
+  updateHUD();
+  updateEventStatus();
+  updatePanel();
+  updateLabelPositions();
+  updateNav();
+  updateGuideCard();
+}
+
+// ===== Init =====
+function init() {
+  // Load or create state
+  const saved = loadGame();
+  const now = Date.now();
+  if (saved) {
+    state = saved;
+    // Offline settlement
+    const offline = settleOffline(state, now);
+    if (offline.applied && offline.effectiveMs > 60000) {
+      setTimeout(function() {
+        openModal('离线收益',
+          '<p class="muted-text">离开期间（' + formatDuration(offline.effectiveMs) + '）矿站自动运行：</p>' +
+          '<div class="offline-list">' +
+          '<div class="row"><dt>采掘器产出</dt><dd class="cyan">+' + formatNumber(offline.summary.producedStardust) + ' 星尘矿</dd></div>' +
+          '<div class="row"><dt>运输线转运</dt><dd class="cyan">+' + formatNumber(offline.summary.movedStardust) + ' 星尘矿</dd></div>' +
+          '<div class="row"><dt>精炼厂产出</dt><dd class="purple">+' + formatNumber(offline.summary.refinedCrystal) + ' 晶体</dd></div>' +
+          '</div>' +
+          '<p class="muted-text" style="margin-top:10px">离线为福利时段，产出不封顶。</p>',
+          [{ label: '确认领取', className: 'primary', onClick: function(close) { close(); } }]
+        );
+      }, 500);
+    }
+  } else {
+    state = createNewGame(now);
+    guideStep = 0;
+    guideDismissed = false;
+    setTimeout(function() { updateGuideCard(); }, 800);
+  }
+
+  // Init canvas
+  initCanvas();
+
+  // Event listeners
+  // Speed buttons
+  document.querySelectorAll('.speed-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      gameSpeed = parseInt(btn.dataset.speed);
+      document.querySelectorAll('.speed-btn').forEach(function(b) {
+        b.classList.toggle('active', b === btn);
+      });
+      toast('游戏速度：' + gameSpeed + '×');
+    });
+  });
+
+  // Nav buttons
+  document.querySelectorAll('.nav-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      const page = btn.dataset.page;
+      showPage(page);
+    });
+  });
+
+  // Facility action
+  document.getElementById('btn-facility').addEventListener('click', function() {
+    const f = state.facilities[selectedId];
+    if (!f.unlocked) {
+      const r = unlockFacility(state, selectedId);
+      if (r.ok) {
+        toast('解锁成功：' + FACILITIES[selectedId].name, 'success');
+        if (selectedId === 'transport') advanceGuide();
+      } else {
+        toast(r.reason || '解锁失败', 'error');
+      }
+    } else if (f.level < MAX_LEVEL) {
+      const r = upgradeFacility(state, selectedId);
+      if (r.ok) {
+        toast('升级成功：' + FACILITIES[selectedId].name + ' Lv.' + f.level, 'success');
+        if (selectedId === 'excavator' && guideStep === 1) advanceGuide();
+      } else {
+        toast(r.reason || '升级失败', 'error');
+      }
+    }
+    saveGame();
+    updateAllUI();
+  });
+
+  // Energy strategy
+  document.querySelectorAll('.energy-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      state.energyStrategy = btn.dataset.strategy;
+      if (guideStep === 2) advanceGuide();
+      updateAllUI();
+      saveGame();
+    });
+  });
+
+  // Sell buttons
+  document.getElementById('btn-sell-stardust').addEventListener('click', function() {
+    const qty = parseInt(document.getElementById('qty-stardust').value) || 0;
+    const gained = sellResource(state, 'stardust', qty);
+    if (gained > 0) {
+      toast('出售成功：+' + gained + ' 信用点', 'success');
+      if (guideStep === 0) advanceGuide();
+    }
+    updateAllUI();
+    saveGame();
+  });
+  document.getElementById('btn-sell-stardust-all').addEventListener('click', function() {
+    const gained = sellResource(state, 'stardust');
+    if (gained > 0) {
+      toast('全部出售：+' + gained + ' 信用点', 'success');
+      if (guideStep === 0) advanceGuide();
+    }
+    updateAllUI();
+    saveGame();
+  });
+  document.getElementById('btn-sell-crystal').addEventListener('click', function() {
+    const qty = parseInt(document.getElementById('qty-crystal').value) || 0;
+    const gained = sellResource(state, 'crystal', qty);
+    if (gained > 0) toast('出售成功：+' + gained + ' 信用点', 'success');
+    updateAllUI();
+    saveGame();
+  });
+  document.getElementById('btn-sell-crystal-all').addEventListener('click', function() {
+    const gained = sellResource(state, 'crystal');
+    if (gained > 0) toast('全部出售：+' + gained + ' 信用点', 'success');
+    updateAllUI();
+    saveGame();
+  });
+
+  // Auto sell
+  document.getElementById('auto-sell-stardust').addEventListener('change', function(e) {
+    state.settings.autoSellStardust = e.target.checked;
+    saveGame();
+  });
+  document.getElementById('auto-sell-keep').addEventListener('change', function(e) {
+    const v = parseInt(e.target.value);
+    state.settings.stardustKeepAmount = isFinite(v) && v >= 0 ? v : DEFAULT_STARDUST_KEEP;
+    saveGame();
+  });
+  document.getElementById('auto-sell-crystal').addEventListener('change', function(e) {
+    state.settings.autoSellCrystal = e.target.checked;
+    saveGame();
+  });
+  document.getElementById('auto-sell-crystal-keep').addEventListener('change', function(e) {
+    const v = parseInt(e.target.value);
+    state.settings.crystalKeepAmount = isFinite(v) && v >= 0 ? v : DEFAULT_CRYSTAL_KEEP;
+    saveGame();
+  });
+
+  // Save modal button
+  document.getElementById('btn-save-modal').addEventListener('click', function() {
+    showSaveModal();
+  });
+
+  // Guide close
+  document.getElementById('btn-guide-close').addEventListener('click', function() {
+    guideDismissed = true;
+    updateGuideCard();
+  });
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', function(e) {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === '1') { state.energyStrategy = 'excavation'; if (guideStep === 2) advanceGuide(); updateAllUI(); saveGame(); }
+    else if (e.key === '2') { state.energyStrategy = 'balanced'; if (guideStep === 2) advanceGuide(); updateAllUI(); saveGame(); }
+    else if (e.key === '3') { state.energyStrategy = 'refinement'; if (guideStep === 2) advanceGuide(); updateAllUI(); saveGame(); }
+    else if (e.key === 'u' || e.key === 'U') {
+      const f = state.facilities[selectedId];
+      if (f.unlocked && f.level < MAX_LEVEL) {
+        const r = upgradeFacility(state, selectedId);
+        if (r.ok) {
+          toast('升级成功：' + FACILITIES[selectedId].name + ' Lv.' + f.level, 'success');
+          if (selectedId === 'excavator' && guideStep === 1) advanceGuide();
+          saveGame();
+          updateAllUI();
+        }
+      }
+    }
+    else if (e.key === 'm' || e.key === 'M') {
+      saveGame();
+      lastSave = Date.now();
+      updateSaveStatus('已保存 ' + new Date().toLocaleTimeString('zh-CN'));
+      toast('已手动存档', 'success');
+    }
+    else if (e.key === '`' || e.key === '~') {
+      e.preventDefault();
+      showDebugPanel();
+    }
+    else if (e.key === 'Escape') {
+      const backdrop = document.querySelector('.modal-backdrop');
+      if (backdrop) backdrop.remove();
+    }
+  });
+
+  // Start game loop
+  updateAllUI();
+  updateSaveStatus('已加载');
+  setInterval(gameTick, STEP_MS);
+}
+
+// Start
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+</script>
+</body>
+</html>
