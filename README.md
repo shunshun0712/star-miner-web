@@ -52,7 +52,7 @@
 
 | 入口 | 状态 |
 |------|------|
-| ▶ 在线 Demo（GitHub Pages） | ✅ [https://shunshun0712.github.io/star-miner-web/](https://shunshun0712.github.io/star-miner-web/) |
+| ▶ 在线 Demo（GitHub Pages） | ✅ [https://shunshun0712.github.io/star-miner-web/demo/](https://shunshun0712.github.io/star-miner-web/demo/) |
 
 ## 截图
 
