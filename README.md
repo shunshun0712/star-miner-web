@@ -1,11 +1,5 @@
 # 星际矿站 · Star Miner
 
-[![CI](https://github.com/shunshun0712/star-miner-web/actions/workflows/ci.yml/badge.svg)](https://github.com/shunshun0712/star-miner-web/actions)
-![GitHub stars](https://img.shields.io/github/stars/shunshun0712/star-miner-web)
-![last commit](https://img.shields.io/github/last-commit/shunshun0712/star-miner-web)
-![open issues](https://img.shields.io/github/issues/shunshun0712/star-miner-web)
-![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
-
 > **v0.5.0** ｜ 💻 **仅桌面端浏览器**（手机/平板未适配）｜ 🔊 有音效、无 BGM（顶栏按钮可关）
 
 一款原创科幻放置经营游戏，浏览器打开即玩。在 Aurora-1 星球上修复采掘器、运输线与精炼厂，把一座废弃矿站重建为自给自足的星际工业枢纽。
@@ -48,17 +42,17 @@
 
 ## 在线体验
 
-> ▶ 免安装、免登录，浏览器打开即玩（GitHub Pages 托管静态单文件版）。
+> 🚧 在线 Demo 部署中（计划用 GitHub Pages 托管静态构建）。部署完成前，可按[快速开始](#快速开始)本地跑起来（约 2 分钟），或先看下方截图。
 
 | 入口 | 状态 |
 |------|------|
-| ▶ 在线 Demo（GitHub Pages） | ✅ [https://shunshun0712.github.io/star-miner-web/demo/](https://shunshun0712.github.io/star-miner-web/demo/) |
+| ▶ 在线 Demo（GitHub Pages） | 部署中，链接待补充 |
 
 ## 截图
 
 ![星际矿站游戏截图](screenshot.png)
 
-*v0.5.0 主界面：左侧设施导航，中央 3D 矿站场景*
+*v0.5.0 主界面：左侧设施导航，中央 3D 矿站场景，右侧增益/探索/兑换面板*
 
 ## 游戏目标
 
@@ -283,7 +277,7 @@ npm run test:watch  # 开发态监听
 - [x] M3 转生系统
 - [x] M4 星核商店
 - [ ] 🚧 T3/T4 科技树与数值平衡（节点已定义、资源 schema 已注册，待填充数值，下一版本推进）
-- [x] 在线 Demo 部署（GitHub Pages）
+- [ ] 🚧 在线 Demo 部署（GitHub Pages）
 - [ ] 移动端适配
 - [ ] 贡献指南与工程化配置（lint / format）
 - [ ] Steam 移植评估
